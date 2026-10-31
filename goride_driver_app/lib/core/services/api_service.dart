@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   final http.Client client;
   final SharedPreferences prefs;
-  final String baseUrl = 'http://192.168.100.168:3000/api';
+  final String baseUrl = 'https://goride-phjs.onrender.com/api';
   Function? onUnauthorized;
 
   ApiService({required this.client, required this.prefs, this.onUnauthorized});  
