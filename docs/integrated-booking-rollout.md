@@ -48,9 +48,9 @@ fake funds were created to test it. Matching worker runs in the backend process
 and needs the server service-role key. Backend health version is now 5.
 
 007 access cutover is now included in live migration 014 (screenshot repairs).
-009/010 PIN/profile cutovers remain staged until compatible deployment is verified. In particular, legacy table/RPC permissions and profile/ledger RLS
-must be closed before real-money operations. New endpoints enforce ownership,
-but this does not make legacy direct access safe. See trip-pin-rollout.md.
+009/010 PIN/profile cutovers are now applied live and ACL-verified. In particular, legacy table/RPC permissions and profile/ledger RLS
+are now closed at the database layer; broader production review remains required. New endpoints enforce ownership,
+and legacy direct ride/message access is now revoked. See trip-pin-rollout.md.
 
 Deploy backend + both apps together. The new booking endpoint requires quoteId;
 old apps with client hardcoded fares intentionally cannot book through that new

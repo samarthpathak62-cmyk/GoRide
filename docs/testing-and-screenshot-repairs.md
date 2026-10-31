@@ -59,4 +59,4 @@ matching rzp_live_ keys, live webhook configuration and approved merchant setup.
 Keep test order history; never convert sandbox balances into live funds. Bank
 payout/refund-provider integration is still not implemented by this sandbox.
 
-Live verification after 014/015: 11 system-expiry events, 0 pending rides, 3 completed rides unchanged, direct authenticated message INSERT and ride UPDATE both denied, sandbox credits 0. No gateway test was performed or funds credited. PIN/profile cutovers 009/010 remain separate rollout gates.
+Live verification after 014/015: 11 system-expiry events, 0 pending rides, 3 completed rides unchanged, direct authenticated message INSERT and ride UPDATE both denied, sandbox credits 0. No gateway test was performed or funds credited. 009/010 PIN/profile cutovers were subsequently applied live and ACL-verified: client wallet updates and core lifecycle execution are denied; profile/transaction/ride/message RLS is enabled. Provider/device acceptance remains unverified.

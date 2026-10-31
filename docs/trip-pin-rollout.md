@@ -1,3 +1,5 @@
+> Current status (2026-10-31 screenshot repair): 009/010 cutovers are now LIVE, as is 007 via migration 014. Do not reapply them. Client wallet updates, core lifecycle execution and direct ride/message access are denied. The rollout checklist below is historical guidance; live phone/provider/deployment acceptance remains to be established.
+
 # Trip verification and account privacy — 31 October 2026
 
 ## Implemented in source
