@@ -17,6 +17,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final AuthBloc authBloc;
   final SocketService socketService;
   StreamSubscription<Position>? _positionSubscription;
+  final Set<String> _seenOffers={};
 
   HomeBloc({
     required this.apiService, 
@@ -55,7 +56,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       try { final r = await apiService.get('/drivers/offers'); final offers = r['data'] as List; if (offers.isNotEmpty && !isClosed) add(NewRideRequestReceivedEvent(rideData: Map<String,dynamic>.from(offers.first))); } catch (_) {}
     });
     on<NewRideRequestReceivedEvent>((event, emit) {
-      print("HOME_BLOC: New ride request received event in Bloc");
+      if(!state.isOnline)return;
+      final id=event.rideData['rideId']?.toString()??event.rideData['id']?.toString();
+      final expiry=DateTime.tryParse(event.rideData['expiresAt']?.toString()??'');
+      if(id==null || (expiry!=null && expiry.isBefore(DateTime.now())) || _seenOffers.contains(id))return;
+      if(_seenOffers.length>=256)_seenOffers.remove(_seenOffers.first);
+      _seenOffers.add(id);
       di.sl<NotificationService>().showRideOffer(event.rideData);
       emit(HomeNewRideRequest(
         rideData: event.rideData,
