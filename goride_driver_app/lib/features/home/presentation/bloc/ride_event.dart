@@ -61,10 +61,16 @@ class SocketRideCancelledEvent extends RideEvent {
 
 class StartRideEvent extends RideEvent {
   final String rideId;
-  StartRideEvent({required this.rideId});
+  final String pin;
+  StartRideEvent({required this.rideId, required this.pin});
   @override
-  List<Object?> get props => [rideId];
+  List<Object?> get props => [rideId, pin];
+  @override
+  String toString() => 'StartRideEvent(rideId: $rideId, pin: [REDACTED])';
 }
+
+class SocketRideStartedEvent extends RideEvent {}
+class SocketRideCompletedEvent extends RideEvent {}
 
 class CompleteRideEvent extends RideEvent {
   final String rideId;

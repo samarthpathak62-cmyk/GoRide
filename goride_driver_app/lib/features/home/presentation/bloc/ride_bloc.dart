@@ -46,7 +46,7 @@ class RideBloc extends Bloc<RideEvent, RideState> {
       }
     });
 
-    on<InitRideTrackingEvent>((event, emit) {
+    on<InitRideTrackingEvent>((event, emit) async {
       _currentRideId = event.rideId;
       socketService.connect();
       socketService.joinRide(event.rideId);
@@ -62,20 +62,31 @@ class RideBloc extends Bloc<RideEvent, RideState> {
         }
       });
 
-      socketService.onDriverArrived((_) {
-        if (isClosed) return;
+      socketService.onDriverArrived((data) {
+        if (isClosed || data?['rideId']?.toString() != _currentRideId) return;
         add(ArrivedInternalEvent());
       });
 
-      socketService.onRideStarted((_) {
-        if (isClosed) return;
-        add(StartRideEvent(rideId: event.rideId));
+      socketService.onRideStarted((data) {
+        if (isClosed || data?['rideId']?.toString() != _currentRideId) return;
+        add(SocketRideStartedEvent());
       });
 
-      socketService.onRideCompleted((_) {
-        if (isClosed) return;
-        add(CompleteRideEvent(rideId: event.rideId));
+      socketService.onRideCompleted((data) {
+        if (isClosed || data?['rideId']?.toString() != _currentRideId) return;
+        add(SocketRideCompletedEvent());
       });
+      try {
+        final response = await apiService.get('/rides/active', query: {'driverId': 'self'});
+        final data = response['data'];
+        if (!emit.isDone && data is Map && data['id'] == event.rideId) {
+          if (['accepted', 'driver_arrived', 'started'].contains(data['status'])) _startLocationTracking(event.rideId);
+          if (data['status'] == 'started') emit(RideStarted());
+          else if (data['status'] == 'driver_arrived') emit(RideArrived());
+          else if (data['status'] == 'accepted') emit(RideConfirmed(rideId: event.rideId));
+        }
+      } catch (_) { /* Keep socket listeners; allow a later retry after network recovery. */ }
+
     });
 
     on<LocationUpdatedInternalEvent>((event, emit) {
@@ -123,11 +134,14 @@ class RideBloc extends Bloc<RideEvent, RideState> {
       }
     });
 
+    on<SocketRideStartedEvent>((event, emit) => emit(RideStarted()));
+    on<SocketRideCompletedEvent>((event, emit) => emit(RideCompleted()));
+
     on<StartRideEvent>((event, emit) async {
       print(" BLOC: StartRideEvent for ride ${event.rideId}");
       try {
         if (state is! RideStarted) {
-           await apiService.post('/rides/start', {'rideId': event.rideId});
+           await apiService.post('/rides/start', {'rideId': event.rideId, 'pin': event.pin});
         }
         emit(RideStarted());
       } catch (e) {

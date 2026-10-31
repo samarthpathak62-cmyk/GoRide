@@ -7,10 +7,10 @@ let signupResult;
 Module._load = function (name, parent, isMain) {
   if (parent?.filename.endsWith('/services/authService.js')) {
     if (name === '../config/supabase') return {
-      supabase: { auth: { signUp: async (payload) => {
+      createAuthClient: () => ({ auth: { signUp: async (payload) => {
         request = payload;
         return signupResult;
-      } } },
+      } } }),
     };
     if (name === './storageService') return {};
   }

@@ -38,8 +38,8 @@ app.post('/api/wallet/webhook', express.raw({ type: 'application/json', limit: '
     res.json({ received: true });
   } catch (error) { next(error); }
 });
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '4mb' }));
+app.use(express.urlencoded({ limit: '64kb', extended: false }));
 app.use(logger);
 
 const { initSocket } = require('./src/socket/socketHandler');
@@ -63,7 +63,7 @@ app.use('/api', rideRoutes);
 
 
 app.get('/health', (req, res) => res.json({ status: 'ok', message: 'GoRide Backend is healthy!',
-  apiVersion: 3, build: (process.env.RENDER_GIT_COMMIT || '').slice(0,12) || 'unknown' }));
+  apiVersion: 4, build: (process.env.RENDER_GIT_COMMIT || '').slice(0,12) || 'unknown' }));
 app.get('/', (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.set('Referrer-Policy', 'no-referrer');

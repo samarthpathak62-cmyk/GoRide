@@ -3,10 +3,14 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { protect } = require('../middlewares/authMiddleware');
 
-router.post('/update-profile', protect, authController.updateProfile);
 
-router.post('/signup', authController.signup);
-router.post('/login', authController.login);
+
+const loginLimiter=require('express-rate-limit').rateLimit({windowMs:15*60000,limit:30,standardHeaders:'draft-7',legacyHeaders:false,message:{message:'Too many sign-in attempts. Please wait before retrying.'}});
+router.post('/signup', loginLimiter, authController.signup);
+router.post('/login', loginLimiter, authController.login);
+
+router.use(protect);
+router.post('/update-profile', authController.updateProfile);
 
 router.post('/mfa/enroll', authController.enrollMfa);
 router.post('/mfa/challenge', authController.challengeMfa);

@@ -1,11 +1,11 @@
 const admin = require('../config/firebase');
-const { supabase } = require('../config/supabase');
+const { getServiceClient } = require('../config/serviceClient');
 
 class NotificationService {
 
   async sendToUser(userId, notification, data = {}) {
     try {
-      const { data: profile, error } = await supabase
+      const { data: profile, error } = await getServiceClient()
         .from('profiles')
         .select('fcm_token')
         .eq('id', userId)
@@ -36,7 +36,7 @@ class NotificationService {
 
   async sendToMultipleUsers(userIds, notification, data = {}) {
     try {
-      const { data: profiles, error } = await supabase
+      const { data: profiles, error } = await getServiceClient()
         .from('profiles')
         .select('fcm_token')
         .in('id', userIds);

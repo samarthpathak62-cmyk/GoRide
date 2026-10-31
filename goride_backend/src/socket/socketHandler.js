@@ -37,7 +37,7 @@ function initSocket(io){
    if(!coordinates(data.lat,data.lng))throw Error();
    const ride=await rideMember(data.rideId,socket.userId,true);
    if(!['accepted','driver_arrived','started'].includes(ride.status))throw Error();
-   io.to(data.rideId).emit('driver_location_update',{lat:data.lat,lng:data.lng});
+   io.to(data.rideId).emit('driver_location_update',{rideId:data.rideId,lat:data.lat,lng:data.lng});
   });
   on('send_message',async(data,ack)=>{
    await peers(socket.userId,data.receiverId);

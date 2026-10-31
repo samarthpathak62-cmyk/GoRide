@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/trip_pin_card.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -247,6 +248,10 @@ class _RideTrackingViewState extends State<RideTrackingView> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    BlocBuilder<RideTrackingBloc, RideTrackingState>(builder: (context, state) {
+                      if (state is RideTrackingActive && (state.isStarted || state.isCompleted)) return const SizedBox.shrink();
+                      return TripPinCard(key: ValueKey(widget.rideId), rideId: widget.rideId);
+                    }),
                     Row(
                       children: [
                         CircleAvatar(

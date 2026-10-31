@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:goride_driver_app/features/home/presentation/bloc/home_bloc.dart';
@@ -35,6 +36,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   bool _isArrived = false;
   bool _isStarted = false;
   bool _isCompleted = false;
+  bool _starting = false;
 
   @override
   void initState() {
@@ -112,8 +114,12 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
               _isArrived = true;
               _status = "Arrived at Pickup";
             });
+          } else if (state is RideError) {
+            setState(() => _starting = false);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
           } else if (state is RideStarted) {
             setState(() {
+              _starting = false;
               _isStarted = true;
               _status = "Ride in Progress";
             });
@@ -498,10 +504,12 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                                 width: double.infinity,
                                 height: 60,
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    context.read<RideBloc>().add(
-                                      StartRideEvent(rideId: rideId),
-                                    );
+                                  onPressed: _starting ? null : () async {
+                                    final bloc = context.read<RideBloc>();
+                                    final pin = await showDialog<String>(context: context, builder: (_) => const _TripPinDialog());
+                                    if (!mounted || pin == null || bloc.isClosed) return;
+                                    setState(() => _starting = true);
+                                    bloc.add(StartRideEvent(rideId: rideId, pin: pin));
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xff76eb07),
@@ -511,7 +519,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                                     ),
                                   ),
                                   child: Text(
-                                    "START RIDE",
+                                    _starting ? "VERIFYING…" : "VERIFY PIN & START",
                                     style: GoogleFonts.outfit(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w900,
@@ -594,4 +602,28 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
       ),
     );
   }
+}
+
+class _TripPinDialog extends StatefulWidget {
+  const _TripPinDialog();
+  @override
+  State<_TripPinDialog> createState() => _TripPinDialogState();
+}
+class _TripPinDialogState extends State<_TripPinDialog> {
+  final _controller = TextEditingController();
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Passenger trip PIN'),
+    content: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Text('Check that the passenger is at pickup. Ask for the 4-digit PIN on their GoRide trip screen. This is not their login OTP.'),
+      TextField(controller: _controller, autofocus: true, keyboardType: TextInputType.number,
+        maxLength: 4, inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        obscureText: true, enableSuggestions: false, autocorrect: false,
+        onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: '4-digit trip PIN')),
+    ]),
+    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+      FilledButton(onPressed: _controller.text.length == 4 ? () => Navigator.pop(context, _controller.text) : null, child: const Text('Verify & start'))],
+  );
 }

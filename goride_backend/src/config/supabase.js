@@ -8,10 +8,11 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('MISSING SUPABASE CREDENTIALS IN .ENV');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const createAuthClient = () => createClient(supabaseUrl,supabaseKey,{auth:{persistSession:false,autoRefreshToken:false}});
+const supabase = createAuthClient();
 
 const getScopedClient = async (token) => {
-  if (!token) return supabase;
+  if (!token) throw new (require('../utils/AppError'))('Sign in to continue.',401);
   
   return createClient(supabaseUrl, supabaseKey, {
     global: {
@@ -26,4 +27,4 @@ const getScopedClient = async (token) => {
   });
 };
 
-module.exports = { supabase, getScopedClient };
+module.exports = { supabase, getScopedClient, createAuthClient };

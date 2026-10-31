@@ -45,7 +45,7 @@ Future<void> init() async {
     () => ExploreBloc(apiService: sl(), socketService: sl(), authBloc: sl()),
   );
   sl.registerFactory(() => WalletBloc());
-  sl.registerFactory(() => RideTrackingBloc(socketService: sl()));
+  sl.registerFactory(() => RideTrackingBloc(socketService: sl(), apiService: sl()));
   sl.registerFactory(() => ChatBloc(socketService: sl(), apiService: sl()));
   sl.registerSingleton<CallBloc>(CallBloc(webrtcService: sl()));
   sl.registerFactory(() => BookingsBloc(apiService: sl(), authBloc: sl()));

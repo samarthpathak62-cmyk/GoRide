@@ -88,3 +88,10 @@ Approved merchant/payout accounts and KYC, routing/geocoding/map provider access
 reliable SMTP/OTP delivery and associated billing, valid transport permissions,
 operational safety/support staff, release signing and store distribution. Enter
 credentials only in the relevant provider/server settings, never chat/Git/APKs.
+
+## Milestone 2 progress update
+Trip-start PIN, isolated password/signup sessions, actor-bound device/logout,
+scoped profile access and tested profile/ledger privacy migrations are now in
+source. See [trip-pin-rollout.md](trip-pin-rollout.md) for exact live vs staged
+migration state, cryptographic contract and device acceptance checklist. Secure
+mobile token storage/refresh and the other launch gates remain outstanding.

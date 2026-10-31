@@ -323,7 +323,7 @@ exports.notifyArrived = async (req, res) => {
 exports.startRide = async (req, res) => {
   try {
     const { rideId } = req.body;
-    const ride = await rideService.startRide(rideId, req.user.id);
+    const ride = await rideService.startRide(rideId, req.user.id, req.body.pin);
 
     if (global.io) {
       global.io.to(rideId).emit('ride_started', { rideId });
@@ -469,3 +469,9 @@ exports.getRideHistory = async (req, res) => {
   }
 };
 
+
+exports.getTripPin=require('../utils/catchAsync')(async(req,res)=>{
+ if(req.body?.rotate!==undefined&&typeof req.body.rotate!=='boolean')throw new (require('../utils/AppError'))('Invalid PIN replacement request.',400);
+ const data=await require('../services/tripPinService').issue(req.params.rideId,req.user.id,req.body?.rotate===true);
+ res.set('Cache-Control','no-store');res.json({data});
+});

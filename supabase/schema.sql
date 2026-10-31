@@ -19,3 +19,8 @@
 \i migrations/202610310005_admin_claim_repair.sql
 \i migrations/202610310006_secure_ride_lifecycle.sql
 \i migrations/202610310007_ride_access_cutover.sql
+\i migrations/202610310008_trip_start_pin.sql
+\i migrations/202610310009_trip_pin_cutover.sql
+\i migrations/202610310010_profile_privacy.sql
+\i migrations/202610310011_disable_legacy_payout.sql
+\i migrations/202610310012_profile_photos.sql

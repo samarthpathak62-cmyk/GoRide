@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../../core/services/api_service.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:math' as math;
 import '../../../../../core/services/socket_service.dart';
@@ -7,9 +8,10 @@ import 'ride_tracking_state.dart';
 
 class RideTrackingBloc extends Bloc<RideTrackingEvent, RideTrackingState> {
   final SocketService _socketService;
+  final ApiService _apiService;
   LatLng? _pickupLocation;
 
-  RideTrackingBloc({required SocketService socketService}) : _socketService = socketService, super(RideTrackingInitial()) {
+  RideTrackingBloc({required SocketService socketService, required ApiService apiService}) : _socketService = socketService, _apiService = apiService, super(RideTrackingInitial()) {
     on<StartTrackingEvent>(_onStartTracking);
     on<DriverLocationUpdatedEvent>(_onLocationUpdated);
     on<DriverArrivedEvent>(_onDriverArrived);
@@ -17,10 +19,10 @@ class RideTrackingBloc extends Bloc<RideTrackingEvent, RideTrackingState> {
     on<RideCompletedEvent>(_onRideCompleted);
   }
 
-  void _onStartTracking(
+  Future<void> _onStartTracking(
     StartTrackingEvent event,
     Emitter<RideTrackingState> emit,
-  ) {
+  ) async {
     print(
       " RIDER_TRACKING_BLOC: Starting tracking for ride ${event.rideId}",
     );
@@ -35,6 +37,7 @@ class RideTrackingBloc extends Bloc<RideTrackingEvent, RideTrackingState> {
     );
 
     _socketService.onDriverLocationUpdate((data) {
+      if (isClosed || data?['rideId']?.toString() != event.rideId) return;
       if (data != null && data['lat'] != null && data['lng'] != null) {
         add(
           DriverLocationUpdatedEvent(
@@ -48,18 +51,33 @@ class RideTrackingBloc extends Bloc<RideTrackingEvent, RideTrackingState> {
       }
     });
 
-    _socketService.onDriverArrived((_) {
+    _socketService.onDriverArrived((data) {
+      if (isClosed || data?['rideId']?.toString() != event.rideId) return;
       add(const DriverArrivedEvent());
     });
 
-    _socketService.onRideStarted((_) {
+    _socketService.onRideStarted((data) {
+      if (isClosed || data?['rideId']?.toString() != event.rideId) return;
       add(const RideStartedEvent());
     });
 
     _socketService.onRideCompleted((data) {
+      if (isClosed || data?['rideId']?.toString() != event.rideId) return;
       final fare = (data?['fare'] as num?)?.toDouble() ?? 0.0;
       add(RideCompletedEvent(fare: fare));
     });
+    try {
+      final response = await _apiService.get('/rides/active');
+      final data = response['data'];
+      if (!emit.isDone && data is Map && data['id'] == event.rideId && state is RideTrackingActive) {
+        final current = state as RideTrackingActive;
+        final started = current.isStarted || data['status'] == 'started';
+        final arrived = current.hasArrived || started || data['status'] == 'driver_arrived';
+        emit(current.copyWith(isStarted: started, hasArrived: arrived,
+          statusMessage: started ? 'Ride in progress' : arrived ? 'Driver has arrived!' : current.statusMessage));
+      }
+    } catch (_) { /* Socket updates remain active; a temporary read must not reset trip state. */ }
+
   }
 
   void _onLocationUpdated(

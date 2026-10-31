@@ -92,7 +92,7 @@ class RideService {
   async rejectDriver(id,actor){return this.action(id,actor,'reject');}
   async cancelRide(id,actor){return this.action(id,actor,'cancel');}
   async driverArrived(id,actor){return this.action(id,actor,'arrive');}
-  async startRide(id,actor){return this.action(id,actor,'start');}
+  async startRide(id,actor,pin){return require('./tripPinService').start(id,actor,pin);}
   async completeRide(id,actor){return this.action(id,actor,'complete');}
 }
 module.exports = new RideService();
