@@ -47,8 +47,8 @@ only transactional booking/dispatch/settlement RPCs. No live rides, balances or
 fake funds were created to test it. Matching worker runs in the backend process
 and needs the server service-role key. Backend health version is now 5.
 
-Older 007/009/010 cutovers remain staged until the compatible backend deployment
-is verified. In particular, legacy table/RPC permissions and profile/ledger RLS
+007 access cutover is now included in live migration 014 (screenshot repairs).
+009/010 PIN/profile cutovers remain staged until compatible deployment is verified. In particular, legacy table/RPC permissions and profile/ledger RLS
 must be closed before real-money operations. New endpoints enforce ownership,
 but this does not make legacy direct access safe. See trip-pin-rollout.md.
 

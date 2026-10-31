@@ -45,7 +45,7 @@ Set on the backend via its secure environment settings, never in chat or APK:
 Only use the
 provider's supported test instruments, not real card/account credentials. A
 signed event is not enough: the backend retrieves the payment and link, checks
-captured status/amount/currency/order and requires payment.live=false. Failed or
+captured status/amount/currency/order using the mode-specific provider credentials (Razorpay payments do not require a live boolean field). Failed or
 merely authorized payments do not credit anything. Test orders have an explicit
 mode and credit only sandbox_payment_credits, never profiles.wallet_balance or
 transactions. Repeated webhooks credit once. The app shows an unspendable sandbox
@@ -58,3 +58,5 @@ transaction has been performed here. Live activation uses PAYMENT_MODE=live,
 matching rzp_live_ keys, live webhook configuration and approved merchant setup.
 Keep test order history; never convert sandbox balances into live funds. Bank
 payout/refund-provider integration is still not implemented by this sandbox.
+
+Live verification after 014/015: 11 system-expiry events, 0 pending rides, 3 completed rides unchanged, direct authenticated message INSERT and ride UPDATE both denied, sandbox credits 0. No gateway test was performed or funds credited. PIN/profile cutovers 009/010 remain separate rollout gates.

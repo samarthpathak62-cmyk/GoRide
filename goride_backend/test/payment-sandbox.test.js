@@ -11,7 +11,7 @@ test('captured test webhook routes to isolated test ledger only; cannot cross in
  const sig=crypto.createHmac('sha256',secret).update(event).digest('hex');
  let mode='test',credited=0;
  const db={from:()=>({select:()=>({eq:()=>({single:async()=>({data:{id:'sandbox-order',amount_paise:10000,mode}})})})}),rpc:async name=>{assert.equal(name,'credit_verified_test_payment');credited++;return {};}};
- const service=new PaymentService({env,db,fetchImpl:async url=>({ok:true,json:async()=>url.includes('payment_links/')?{status:'paid',reference_id:'sandbox-order',currency:'INR',amount:10000,amount_paid:10000,payments:[{payment_id:'pay_test'}]}:{live:false,status:'captured',currency:'INR',amount:10000}})});
+ const service=new PaymentService({env,db,fetchImpl:async url=>({ok:true,json:async()=>url.includes('payment_links/')?{status:'paid',reference_id:'sandbox-order',currency:'INR',amount:10000,amount_paid:10000,payments:[{payment_id:'pay_test'}]}:{status:'captured',currency:'INR',amount:10000}})});
  await service.webhook(event,sig);assert.equal(credited,1);
  mode='live';await assert.rejects(service.webhook(event,sig),/mode does not match/);assert.equal(credited,1);
 });

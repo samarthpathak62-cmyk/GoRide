@@ -71,7 +71,7 @@ class PaymentService {
     // A signed event alone is not sufficient: confirm captured funds with the provider.
     const link = await this.gateway(`payment_links/${linkId}`);
     const payment = await this.gateway(`payments/${paymentId}`);
-    if ((this.mode==='test' && payment.live!==false) || (this.mode==='live' && payment.live===false) || link.status !== 'paid' || link.reference_id !== order.id || link.currency !== 'INR' ||
+    if ((typeof payment.live==='boolean' && payment.live!==(this.mode==='live')) || link.status !== 'paid' || link.reference_id !== order.id || link.currency !== 'INR' ||
         link.amount !== Number(order.amount_paise) || link.amount_paid !== Number(order.amount_paise) ||
         !link.payments?.some(p => p.payment_id === paymentId) ||
         payment.status !== 'captured' || payment.currency !== 'INR' || payment.amount !== Number(order.amount_paise)) {
