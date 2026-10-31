@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.goride_app"
+    namespace = "com.goride.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
