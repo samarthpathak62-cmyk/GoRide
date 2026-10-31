@@ -25,7 +25,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => NotificationService(sl()));
 
   final socketService = SocketService();
-  socketService.connect('http://192.168.100.168:3000');
+  socketService.connect('https://goride-phjs.onrender.com');
   sl.registerLazySingleton(() => socketService);
 
   sl.registerSingleton<WebRTCService>(WebRTCService(socketService: sl()));
