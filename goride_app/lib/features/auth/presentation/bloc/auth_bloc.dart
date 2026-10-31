@@ -27,27 +27,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<CheckAuthSession>((event, emit) async {
       print('BLOC: Checking Auth Session');
 
-      final jsonString = prefs.getString(cachedUserKey);
-      if (jsonString != null) {
-        final user = UserModel.fromJson(jsonDecode(jsonString));
-
-        if (!user.isMfaVerified) {
-          print('BLOC: Session found but MFA not verified, clearing...');
+      try {
+        final cached = prefs.getString(cachedUserKey);
+        final token = prefs.getString(authTokenKey);
+        if (cached == null || token == null || token.isEmpty) {
           await prefs.remove(cachedUserKey);
-          await prefs.remove(authTokenKey);
           emit(AuthUnauthenticated());
-        
-        } else {
-          print('BLOC: Session found for ${user.email}');
-          if (user.token != null) {
-            await prefs.setString(authTokenKey, user.token!);
-          }
-          socketService.registerUser(user.id);
-          notificationService.updateTokenOnServer(user.id);
-          emit(AuthAuthenticated(user: user));
+          return;
         }
-      } else {
-        print('BLOC: No session found');
+        final user = UserModel.fromJson(jsonDecode(cached));
+        // Reject expired or corrupt cached sessions rather than opening a broken UI.
+        final parts = token.split('.');
+        final claims = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
+        final expiry = claims['exp'] as num?;
+        if (!user.isMfaVerified || expiry == null ||
+            expiry * 1000 <= DateTime.now().millisecondsSinceEpoch) {
+          throw const FormatException('Session expired; please sign in again.');
+        }
+        socketService.registerUser(user.id);
+        notificationService.updateTokenOnServer(user.id);
+        emit(AuthAuthenticated(user: user));
+      } catch (_) {
+        await prefs.remove(cachedUserKey);
+        await prefs.remove(authTokenKey);
         emit(AuthUnauthenticated());
       }
     });
@@ -110,7 +112,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           'userType': 'rider',
         });
 
-        final user = UserModel.fromJson(response['data']?['user'] ?? response['data']);
+        final signupToken = response['data']?['session']?['access_token'] ?? response['token'];
+        if (signupToken == null) {
+          await prefs.remove(cachedUserKey);
+          await prefs.remove(authTokenKey);
+          emit(AuthError(message: 'Account created. Please verify your email, then return here and log in.'));
+          return;
+        }
+        final user = UserModel.fromJson({
+          ...response['data']['user'],
+          'isMfaVerified': true,
+        });
         final token = response['data']?['session']?['access_token'] ?? response['token'];
         
         if (token != null) {

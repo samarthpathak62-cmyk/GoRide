@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../widgets/driver_status_wrapper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:goride_driver_app/features/documents/presentation/pages/document_submission_page.dart';
@@ -39,7 +40,7 @@ class _AuthPageState extends State<AuthPage> {
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const DocumentSubmissionPage()),
+            MaterialPageRoute(builder: (_) => const DriverStatusWrapper()),
           );
         } else if (state is AuthMfaRequired) {
           Navigator.of(context).push(
@@ -426,6 +427,19 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
+  void _showSocialLoginSetup(IconData icon) {
+    final provider = icon == Icons.facebook_rounded ? 'Facebook'
+        : icon == Icons.apple_rounded ? 'Apple' : 'Google';
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$provider sign-in unavailable'),
+        content: Text('$provider sign-in is not configured yet. Please use email and password for now.'),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+      ),
+    );
+  }
+
   Widget _buildSocialLogin() {
     return Row(
       children: [
@@ -446,7 +460,10 @@ class _AuthPageState extends State<AuthPage> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
-      child: Icon(icon, color: Colors.white70, size: 30),
+      child: IconButton(
+        onPressed: () => _showSocialLoginSetup(icon),
+        icon: Icon(icon, color: Colors.white70, size: 30),
+      ),
     );
   }
 

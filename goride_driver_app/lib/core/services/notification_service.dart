@@ -1,16 +1,23 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:goride_driver_app/core/services/api_service.dart';
 
 class NotificationService {
-  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  FirebaseMessaging get _fcm => FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   final ApiService apiService;
 
   NotificationService(this.apiService);
 
   Future<void> init() async {
+    // Notifications are optional: a Firebase failure must not block startup.
+    if (Firebase.apps.isEmpty) {
+      debugPrint('Skipping notifications: Firebase is not initialized.');
+      return;
+    }
+
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
       badge: true,

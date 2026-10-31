@@ -47,7 +47,19 @@ app.use('/api', rideRoutes);
 
 
 app.get('/health', (req, res) => res.json({ status: 'ok', message: 'GoRide Backend is healthy!' }));
-app.get('/', (req, res) => res.send('GoRide Backend API is live!'));
+app.get('/', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('Referrer-Policy', 'no-referrer');
+  res.type('html').send(`<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>GoRide</title><body><h1>GoRide</h1><p id="message">GoRide API is online.</p>
+    <script>
+      const params = new URLSearchParams(location.hash.slice(1));
+      const message = document.getElementById('message');
+      if (params.has('error')) message.textContent = 'Verification link is invalid or expired. Return to the app and request a new verification email.';
+      else if (params.has('access_token')) message.textContent = 'Email verified. Return to the GoRide app and log in with your email and password.';
+      history.replaceState(null, '', location.pathname);
+    </script></body></html>`);
+});
 
 app.use((err, req, res, next) => {
   console.error('BACKEND ERROR:', err);
