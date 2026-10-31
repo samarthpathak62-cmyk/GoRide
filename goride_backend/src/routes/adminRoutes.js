@@ -16,11 +16,14 @@ router.get('/payments/status', (_req,res)=>{
  try {require('../config/payments').requireConfig();} catch (_) {checkoutReady=false;}
  res.json({checkoutReady,provider:'Razorpay hosted checkout',currency:'INR',
   checks:{serverServiceKey:!!env.SUPABASE_SERVICE_ROLE_KEY,liveGatewayKey:!!env.RAZORPAY_KEY_ID?.startsWith('rzp_live_'),gatewaySecret:!!env.RAZORPAY_KEY_SECRET,webhookSecret:!!env.RAZORPAY_WEBHOOK_SECRET,explicitlyEnabled:env.PAYMENTS_ENABLED==='true'},
-  methods:['UPI','Debit / credit cards','Netbanking'],bankPayoutsReady:false,cashRideReady:false,
+  methods:['UPI','Debit / credit cards','Netbanking'],bankPayoutsReady:false,cashRideImplemented:true,cashRideReady:false,
   notice:'Configuration checks are not a successful transaction or merchant-approval check. Provider eligibility, KYC, webhook delivery and real-money testing remain required. Do not enable until the security review is complete.'});
 });
 router.get('/operations/rides',require('../controllers/operationsController').rides);
 router.get('/operations/rides/:rideId/events',require('../controllers/operationsController').events);
+router.get('/operations/support',require('../controllers/ecosystemController').adminQueue);
+router.post('/operations/tickets/:id/reply',require('../controllers/ecosystemController').reply);
+router.post('/operations/alerts/:id',require('../controllers/ecosystemController').handleAlert);
 router.get('/accounts',accounts.list);
 router.post('/accounts',accounts.create);
 router.get('/applications',admin.list);

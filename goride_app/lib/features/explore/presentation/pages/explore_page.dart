@@ -1,3 +1,4 @@
+import 'fare_confirmation.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -132,22 +133,7 @@ class _ExplorePageState extends State<ExplorePage> {
       listener: (context, state) {
         if (state is RideRequestSuccess) {
           if (Navigator.canPop(context)) Navigator.pop(context);
-          if (state.drivers.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("No drivers available in your area")),
-            );
-          } else {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => NearbyDriversPage(
-                  drivers: state.drivers,
-                  pickupLocation: LatLng(_pickupLat ?? 0, _pickupLng ?? 0),
-                  rideId: state.rideId,
-                ),
-              ),
-            );
-          }
+          Navigator.push(context,MaterialPageRoute(builder: (_) => NearbyDriversPage(drivers:state.drivers,pickupLocation:LatLng(_pickupLat ?? 28.6139,_pickupLng ?? 77.2090),rideId:state.rideId)));
         } else if (state is RideProposed) {
           _showDriverConfirmationDialog(context, state.driver, state.rideId);
         } else if (state is RideAccepted) {
@@ -512,18 +498,23 @@ class _ExplorePageState extends State<ExplorePage> {
                       elevation: 8,
                       shadowColor: const Color(0xff76eb07).withValues(alpha: 0.5),
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       final authState = context.read<AuthBloc>().state;
                       final userId = authState.currentUser?.id;
 
                       if (userId != null) {
-                        context.read<ExploreBloc>().add(
+                        final bloc = context.read<ExploreBloc>();
+                        final selection = await Navigator.push<Map<String,dynamic>>(context,MaterialPageRoute(builder: (_) => FareConfirmation(request: {'pickupLocation':_pickupAddress,'dropLocation':_dropAddress,'category':data.categories[_selectedRideIndex].name,'pickupLatitude':_pickupLat,'pickupLongitude':_pickupLng,'dropLatitude':_dropLat,'dropLongitude':_dropLng})));
+                        if (!mounted || selection == null || bloc.isClosed) return;
+                        bloc.add(
                           RequestRideEvent(
                             userId: userId,
                             pickupLocation: _pickupAddress,
                             dropLocation: _dropAddress,
                             category: data.categories[_selectedRideIndex].name,
-                            fare: 250.0,
+                            fare: (selection['fare'] as num).toDouble(),
+                            quoteId: selection['quoteId'] as String,
+                            paymentMethod: selection['paymentMethod'] as String,
                             pickupLatitude: _pickupLat,
                             pickupLongitude: _pickupLng,
                             dropLatitude: _dropLat,

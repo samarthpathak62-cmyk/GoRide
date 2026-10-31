@@ -11,10 +11,10 @@ async function api(path,body,accessToken=token){
 }
 function clearSetup(){if(qrUrl)URL.revokeObjectURL(qrUrl);qrUrl=null;setup=null;$('mfa-qr').removeAttribute('src');$('mfa-secret').textContent='';$('enroll-code').value='';}
 function showSection(id){for(const key of ['login','register','enroll','activate','dashboard'])$(key).hidden=key!==id;}
-function signOut(){token='';clearSetup();activation=null;selected=null;applications=[];$('detail').replaceChildren();$('applications').replaceChildren();$('accounts').replaceChildren();$('operations-rides').replaceChildren();$('operations-events').replaceChildren();$('password').value='';showSection('login');$('logout').hidden=true;}
+function signOut(){token='';clearSetup();activation=null;selected=null;applications=[];$('detail').replaceChildren();$('applications').replaceChildren();$('accounts').replaceChildren();$('operations-rides').replaceChildren();$('operations-events').replaceChildren();$('support-queue').replaceChildren();$('password').value='';showSection('login');$('logout').hidden=true;}
 $('logout').onclick=signOut;$('mfa-back').onclick=()=>{signOut();notify('Enter your email and password to continue.');};
 $('show-register').onclick=()=>showSection('register');$('back-login').onclick=()=>showSection('login');
-async function openDashboard(data){if(typeof data.token!=='string'||!data.token)throw Error('No verified administrator session returned.');token=data.token;clearSetup();$('password').value='';showSection('dashboard');$('logout').hidden=false;accountsPage=1;await load();await loadAccounts();await loadPayments();await loadOperations();}
+async function openDashboard(data){if(typeof data.token!=='string'||!data.token)throw Error('No verified administrator session returned.');token=data.token;clearSetup();$('password').value='';showSection('dashboard');$('logout').hidden=false;accountsPage=1;await load();await loadAccounts();await loadPayments();await loadOperations();await loadSupport();}
 $('login-form').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;notify('Checking credentials…');try{
  const data=await api('/session',{email:$('email').value,password:$('password').value});
  if(data.setupRequired||data.mfaRequired){clearSetup();setup=data;showSection('enroll');$('password').value='';$('logout').hidden=false;
@@ -52,7 +52,7 @@ else if(['invite','recovery'].includes(fragment.get('type'))&&fragment.get('acce
 }else if(fragment.get('access_token'))notify('Email verified. Sign in below to complete administrator setup.');
 fragment.delete('access_token');fragment.delete('refresh_token');
 async function load(){notify('Loading applications…');try{applications=(await api('/applications')).data;renderQueue();notify('');}catch(e){notify(e.message);}}
-$('refresh').onclick=async()=>{accountsPage=1;await load();await loadAccounts();await loadPayments();await loadOperations();};$('filter').onchange=renderQueue;
+$('refresh').onclick=async()=>{accountsPage=1;await load();await loadAccounts();await loadPayments();await loadOperations();await loadSupport();};$('filter').onchange=renderQueue;
 function renderQueue(){
  $('stats').replaceChildren(...['pending','approved','rejected'].map(status=>{const box=text('div','', 'stat');box.append(text('strong',applications.filter(a=>a.status===status).length),text('span',status));return box;}));
  const list=applications.filter(a=>$('filter').value==='all'||a.status===$('filter').value);
@@ -80,3 +80,9 @@ async function loadPayments(){try{const p=await api('/payments/status');$('payme
  text('p',p.notice,'muted'));}catch(e){$('payment-status').textContent=e.message;}}
 
 async function loadOperations(){try{const r=await api('/operations/rides');$('operations-rides').replaceChildren(...r.data.map(ride=>{const button=text('button',`${ride.category} · INR ${ride.fare} · ${ride.status} · ${ride.id}`,'app');button.onclick=async()=>{try{const events=await api(`/operations/rides/${encodeURIComponent(ride.id)}/events`);$('operations-events').replaceChildren(text('h3',`Trip ${ride.id}`),...events.data.map(e=>text('p',`${e.created_at} · ${e.action}: ${e.from_status||'new'} → ${e.to_status}`)));}catch(e){notify(e.message);}};return button;}));}catch(e){$('operations-rides').textContent=e.message;}}
+
+async function loadSupport(){try{const data=await api('/operations/support');const root=$('support-queue');root.replaceChildren(text('h3','Safety alerts'));
+ for(const alert of data.alerts){const card=text('div',`Trip ${alert.ride_id} · ${alert.created_at} · ${alert.status}`,'account-row');for(const status of ['acknowledged','closed']){const b=text('button',status);b.onclick=async()=>{try{await api(`/operations/alerts/${encodeURIComponent(alert.id)}`,{status});await loadSupport();}catch(e){notify(e.message);}};card.append(b);}root.append(card);}
+ root.append(text('h3','Latest support requests'));for(const ticket of data.tickets){const card=text('div','', 'account-row');card.append(text('strong',`${ticket.category} · ${ticket.status} · ${ticket.id}`),text('p',ticket.message));const reply=document.createElement('textarea');reply.maxLength=2000;reply.value=ticket.reply||'';reply.placeholder='Reply to the account owner (no credentials or unsupported payment claims)';const select=document.createElement('select');for(const status of ['open','in_progress','resolved']){const option=text('option',status);option.value=status;select.append(option);}select.value=ticket.status;const b=text('button','Save reply');b.onclick=async()=>{b.disabled=true;try{await api(`/operations/tickets/${encodeURIComponent(ticket.id)}/reply`,{status:select.value,reply:reply.value});await loadSupport();notify('Reply saved. No payment or refund was executed.');}catch(e){notify(e.message);}finally{b.disabled=false;}};card.append(reply,select,b);root.append(card);}
+ root.append(text('h3','Latest 100 cash trip records'));for(const entry of data.cash)root.append(text('div',`${entry.captain_user_id} · trip ${entry.ride_id} · cash INR ${entry.cash_received} · commission owed INR ${entry.commission_due}`,'account-row'));
+ }catch(e){$('support-queue').textContent=e.message;}}

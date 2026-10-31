@@ -152,7 +152,7 @@ class RideBloc extends Bloc<RideEvent, RideState> {
     on<CompleteRideEvent>((event, emit) async {
       print("BLOC: CompleteRideEvent for ride ${event.rideId}");
       try {
-        await apiService.post('/rides/complete', {'rideId': event.rideId});
+        await apiService.post('/rides/complete', {'rideId': event.rideId, 'cashCollected': event.cashCollected});
         emit(RideCompleted());
       } catch (e) {
         emit(RideError(message: "Failed to complete ride: ${e.toString()}"));

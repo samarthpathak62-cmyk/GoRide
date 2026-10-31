@@ -6,29 +6,12 @@ const { canOperate, categoryVehicle } = require('./onboardingValidation');
 
 class RideService {
   async requestRide(rideData) {
-    const {
-      userId, pickupLocation, dropLocation, category,
-      pickupLatitude, pickupLongitude, dropLatitude, dropLongitude
-    } = rideData;
-
-    if (![pickupLatitude, pickupLongitude, dropLatitude, dropLongitude].every(v => typeof v === 'number' && Number.isFinite(v)) ||
-        Math.abs(pickupLatitude) > 90 || Math.abs(dropLatitude) > 90 || Math.abs(pickupLongitude) > 180 || Math.abs(dropLongitude) > 180) {
-      throw new AppError('Choose valid pickup and destination locations.', 400);
-    }
-    if (!['Bike','Auto','Car','Ride'].includes(category)) throw new AppError('Choose Bike, Auto or Car.',400);
-    const distance = getDistance(
-      { latitude: pickupLatitude, longitude: pickupLongitude },
-      { latitude: dropLatitude, longitude: dropLongitude }
-    );
-
-    const calculatedFare = fareService.calculateFare(distance, category);
-
-    if (![pickupLocation,dropLocation].every(v=>typeof v==='string'&&v.trim().length>=2&&v.length<=500)) throw new AppError('Choose pickup and destination addresses.',400);
-    if (distance<100) throw new AppError('Pickup and destination must be at least 100 metres apart.',400);
-    const {data,error}=await require('../config/serviceClient').getServiceClient().rpc('request_ride_secure',{
-      p_actor:userId,p_payload:{pickupLocation,dropLocation,category,fare:calculatedFare,pickupLatitude,pickupLongitude,dropLatitude,dropLongitude,
-      pickupCoords:`POINT(${pickupLongitude} ${pickupLatitude})`,dropCoords:`POINT(${dropLongitude} ${dropLatitude})`}});
-    if(error) throw new AppError(error.code==='PGRST202'?'Ride database upgrade required. Contact support.':'Could not book: an active ride already exists or wallet balance is insufficient.',error.code==='PGRST202'?503:409);
+    const {uuid}=require('./ridePolicy');uuid(rideData.quoteId,'fare quote');
+    const method=rideData.paymentMethod||'wallet';
+    if(!['cash','wallet'].includes(method))throw new AppError('Choose cash or wallet.',400);
+    await require('./dispatchService').expire(rideData.userId);
+    const {data,error}=await getServiceClient().rpc('book_quoted_ride',{p_actor:rideData.userId,p_quote:rideData.quoteId,p_method:method});
+    if(error)throw new AppError(error.code==='42501'?'This quote does not belong to your account.':'Quote expired, a trip is already active, or wallet funds are insufficient. Refresh the fare or choose cash.',error.code==='42501'?403:409);
     return data;
   }
 
@@ -93,6 +76,11 @@ class RideService {
   async cancelRide(id,actor){return this.action(id,actor,'cancel');}
   async driverArrived(id,actor){return this.action(id,actor,'arrive');}
   async startRide(id,actor,pin){return require('./tripPinService').start(id,actor,pin);}
-  async completeRide(id,actor){return this.action(id,actor,'complete');}
+  async completeRide(id,actor,cashCollected=false){
+    require('./ridePolicy').uuid(id);
+    const {data,error}=await getServiceClient().rpc('settle_ride_v2',{p_actor:actor,p_ride:id,p_cash_collected:cashCollected===true});
+    if(error)throw new AppError(error.code==='42501'?'Only the assigned captain can complete this trip.':'Trip must be started. Cash must be explicitly confirmed collected; wallet trips need sufficient funds.',error.code==='42501'?403:409);
+    return data;
+  }
 }
 module.exports = new RideService();

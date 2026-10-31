@@ -24,3 +24,4 @@
 \i migrations/202610310010_profile_privacy.sql
 \i migrations/202610310011_disable_legacy_payout.sql
 \i migrations/202610310012_profile_photos.sql
+\i migrations/202610310013_booking_operations.sql

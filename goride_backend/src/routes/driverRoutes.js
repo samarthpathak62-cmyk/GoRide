@@ -7,6 +7,8 @@ const onboarding = require('../controllers/onboardingController');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
 
+router.get('/offers',protect,require('../controllers/ecosystemController').offers);
+router.get('/cash-ledger',protect,require('../controllers/ecosystemController').cashSummary);
 router.get('/requirements', onboarding.requirements);
 router.get('/draft', protect, onboarding.getDraft);
 router.post('/draft', protect, onboarding.saveDraft);

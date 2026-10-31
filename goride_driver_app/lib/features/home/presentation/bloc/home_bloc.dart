@@ -48,6 +48,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       }
     });
 
+    on<PollRideOffersEvent>((event, emit) async {
+      if (!state.isOnline) return;
+      try { final r = await apiService.get('/drivers/offers'); final offers = r['data'] as List; if (offers.isNotEmpty && !isClosed) add(NewRideRequestReceivedEvent(rideData: Map<String,dynamic>.from(offers.first))); } catch (_) {}
+    });
     on<NewRideRequestReceivedEvent>((event, emit) {
       print("HOME_BLOC: New ride request received event in Bloc");
       emit(HomeNewRideRequest(

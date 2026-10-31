@@ -52,3 +52,5 @@ class RideConfirmedByPassengerEvent extends HomeEvent {
   @override
   List<Object?> get props => [rideData];
 }
+
+class PollRideOffersEvent extends HomeEvent {}

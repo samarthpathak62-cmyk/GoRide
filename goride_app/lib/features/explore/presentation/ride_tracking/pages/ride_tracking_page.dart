@@ -1,3 +1,4 @@
+import '../../../../../core/widgets/ecosystem_tools.dart';
 import 'package:flutter/material.dart';
 import '../widgets/trip_pin_card.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -248,6 +249,7 @@ class _RideTrackingViewState extends State<RideTrackingView> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    TripTools(rideId: widget.rideId),
                     BlocBuilder<RideTrackingBloc, RideTrackingState>(builder: (context, state) {
                       if (state is RideTrackingActive && (state.isStarted || state.isCompleted)) return const SizedBox.shrink();
                       return TripPinCard(key: ValueKey(widget.rideId), rideId: widget.rideId);

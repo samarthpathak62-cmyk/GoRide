@@ -95,3 +95,11 @@ scoped profile access and tested profile/ledger privacy migrations are now in
 source. See [trip-pin-rollout.md](trip-pin-rollout.md) for exact live vs staged
 migration state, cryptographic contract and device acceptance checklist. Secure
 mobile token storage/refresh and the other launch gates remain outstanding.
+
+## Integrated batch progress
+Quoted booking, cash/wallet selection, matching/confirmation expiry, persisted
+captain offers, cash-collection accounting, receipts, support/safety queues,
+private sharing and both-app controls are now implemented. Migration 013 is live.
+See integrated-booking-rollout.md for exact contracts, routing provenance, cash
+semantics and remaining deployment/provider/production gates. This is not a
+blanket full-parity or commercial-launch sign-off.

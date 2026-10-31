@@ -42,58 +42,12 @@ exports.getExploreData = async (req, res) => {
   }
 };
 
-exports.requestRide = async (req, res) => {
-  try {
-    const ride = await rideService.requestRide({ ...req.body, userId: req.user.id });
-    const nearbyDrivers = await rideService.getNearbyDrivers(req.body.pickupLatitude, req.body.pickupLongitude, req.body.category);
-
-    const { data: passengerProfile } = await getServiceClient()
-      .from('profiles')
-      .select('full_name,profile_pic')
-      .eq('id', ride.user_id)
-      .single();
-
-    if (nearbyDrivers.length > 0) {
-      if (global.io) {
-        nearbyDrivers.forEach(driver => {
-          global.io.to(`driver_${driver.user_id}`).emit('ride_request', {
-            rideId: ride.id,
-            pickup: ride.pickup_location,
-            drop: ride.drop_location,
-            fare: ride.fare,
-            pickupLat: ride.pickup_latitude,
-            pickupLng: ride.pickup_longitude,
-            dropLat: ride.drop_latitude,
-            dropLng: ride.drop_longitude,
-            passengerName: passengerProfile ? passengerProfile.full_name : 'Passenger',
-            passengerProfilePic: passengerProfile ? passengerProfile.profile_pic : null,
-          });
-          console.log(`Sending ride request ${ride.id} to driver_${driver.user_id}`);
-        });
-      }
-
-      const driverUserIds = nearbyDrivers.map(d => d.user_id);
-      notificationService.sendToMultipleUsers(
-        driverUserIds,
-        {
-          title: 'New Ride Request',
-          body: `New ride from ${ride.pickup_location} for INR ${ride.fare}`
-        },
-        { rideId: ride.id.toString(), type: 'ride_request' }
-      );
-    }
-
-    res.status(201).json({
-      status: 'success',
-      data: {
-        ride: ride,
-        nearbyDrivers: nearbyDrivers
-      }
-    });
-  } catch (error) {
-    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
-  }
-};
+exports.requestRide = require('../utils/catchAsync')(async(req,res)=>{
+ const ride=await rideService.requestRide({...req.body,userId:req.user.id});
+ let nearbyDrivers=[],dispatchDelayed=false;
+ try{nearbyDrivers=await require('../services/dispatchService').dispatch(ride);}catch(_){dispatchDelayed=true;}
+ res.status(201).json({status:'success',data:{ride,nearbyDrivers,dispatchDelayed}});
+});
 
 exports.acceptRide = async (req, res) => {
   try {
@@ -350,7 +304,7 @@ exports.startRide = async (req, res) => {
 exports.completeRide = async (req, res) => {
   try {
     const { rideId } = req.body;
-    const result = await rideService.completeRide(rideId, req.user.id);
+    const result = await rideService.completeRide(rideId, req.user.id, req.body.cashCollected);
 
     if (result.status === 'success' || result.status === 'already_completed') {
       if (global.io) {
@@ -388,6 +342,7 @@ exports.completeRide = async (req, res) => {
 
 exports.getActiveRide = async (req, res) => {
   try {
+    await require('../services/dispatchService').expire(req.user.id);
     const userId = req.query.driverId ? null : req.user.id;
     const driverId = req.query.driverId ? req.user.id : null;
     let query = getServiceClient().from('rides').select(RIDE_SELECT);

@@ -74,7 +74,8 @@ class SocketRideCompletedEvent extends RideEvent {}
 
 class CompleteRideEvent extends RideEvent {
   final String rideId;
-  CompleteRideEvent({required this.rideId});
+  final bool cashCollected;
+  CompleteRideEvent({required this.rideId, this.cashCollected = false});
   @override
   List<Object?> get props => [rideId];
 }

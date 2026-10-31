@@ -1,3 +1,4 @@
+import '../../../../core/widgets/ecosystem_tools.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../injection_container.dart' as di;
 import 'package:flutter/material.dart';
@@ -78,7 +79,8 @@ class _WalletPageState extends State<WalletPage> with WidgetsBindingObserver {
         },
         child: Scaffold(
           backgroundColor: const Color(0xff0a0a0a),
-          body: SafeArea(
+          bottomNavigationBar: const SafeArea(child: CashLedgerButton()),
+      body: SafeArea(
             child: BlocBuilder<WalletBloc, WalletState>(
               builder: (context, state) {
                 if (state is WalletLoading) {

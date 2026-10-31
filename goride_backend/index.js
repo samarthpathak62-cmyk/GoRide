@@ -47,6 +47,9 @@ initSocket(io);
 
 
 // Routes
+app.get('/api/trip-share/:token',require('express-rate-limit').rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-7',legacyHeaders:false}),require('./src/controllers/ecosystemController').publicShare);
+app.use('/share-assets',express.static(require('node:path').join(__dirname,'public')));
+app.get('/s/:token',(_req,res)=>res.set({'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'"}).sendFile(require('node:path').join(__dirname,'public/share.html')));
 app.use('/api/admin', require('./src/routes/adminRoutes'));
 app.use('/admin', (req,res,next) => {
   res.set('Cache-Control','no-store');
@@ -63,7 +66,7 @@ app.use('/api', rideRoutes);
 
 
 app.get('/health', (req, res) => res.json({ status: 'ok', message: 'GoRide Backend is healthy!',
-  apiVersion: 4, build: (process.env.RENDER_GIT_COMMIT || '').slice(0,12) || 'unknown' }));
+  apiVersion: 5, build: (process.env.RENDER_GIT_COMMIT || '').slice(0,12) || 'unknown' }));
 app.get('/', (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.set('Referrer-Policy', 'no-referrer');
@@ -90,6 +93,7 @@ app.use((err, req, res, next) => {
   });
 });
 
+require('./src/services/dispatchService').start();
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://0.0.0.0:${PORT}`);
 });

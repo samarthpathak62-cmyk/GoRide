@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -26,10 +27,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   LatLng _currentLocation = const LatLng(28.6139, 77.2090);
   bool _isRideRequestShowing = false;
+  Timer? _offerTimer;
 
   @override
   void initState() {
     super.initState();
+    _offerTimer = Timer.periodic(const Duration(seconds:10), (_) { if(mounted && !_isRideRequestShowing) context.read<HomeBloc>().add(PollRideOffersEvent()); });
     context.read<HomeBloc>().add(InitSocketEvent());
     context.read<HomeBloc>().add(CheckActiveRideEvent());
     
@@ -38,6 +41,9 @@ class _HomePageState extends State<HomePage> {
       context.read<WalletBloc>().add(FetchWalletData(authState.userId));
     }
   }
+
+  @override
+  void dispose() { _offerTimer?.cancel(); super.dispose(); }
 
   Future<Position?> _getCurrentLocation() async {
     bool serviceEnabled;

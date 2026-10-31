@@ -42,6 +42,7 @@ async function database() {
       "010_profile_privacy",
       "011_disable_legacy_payout",
       "012_profile_photos",
+      "013_booking_operations",
     ].map((n) => `migrations/202610310${n}.sql`),
   ])
     await db.exec(fs.readFileSync(path.join(root, file), "utf8"));

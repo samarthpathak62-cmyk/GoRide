@@ -23,6 +23,8 @@ class RequestRideEvent extends ExploreEvent {
   final String dropLocation;
   final String category;
   final double fare;
+  final String quoteId;
+  final String paymentMethod;
   final double? pickupLatitude;
   final double? pickupLongitude;
   final double? dropLatitude;
@@ -34,6 +36,8 @@ class RequestRideEvent extends ExploreEvent {
     required this.dropLocation,
     required this.category,
     required this.fare,
+    required this.quoteId,
+    this.paymentMethod = 'cash',
     this.pickupLatitude,
     this.pickupLongitude,
     this.dropLatitude,
@@ -46,7 +50,7 @@ class RequestRideEvent extends ExploreEvent {
         pickupLocation,
         dropLocation,
         category,
-        fare,
+        fare, quoteId, paymentMethod,
         pickupLatitude,
         pickupLongitude,
         dropLatitude,

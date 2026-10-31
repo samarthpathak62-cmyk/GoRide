@@ -1,3 +1,4 @@
+import '../../../../core/widgets/ecosystem_tools.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -533,10 +534,14 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                                 width: double.infinity,
                                 height: 60,
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    context.read<RideBloc>().add(
-                                      CompleteRideEvent(rideId: rideId),
-                                    );
+                                  onPressed: () async {
+                                    final bloc = context.read<RideBloc>();
+                                    final cash = widget.rideData['payment_method'] == 'cash';
+                                    if (cash) {
+                                      final ok = await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Cash collected?'),content:Text('Confirm only after receiving INR ${widget.rideData['fare']} from the passenger. Cash is NOT credited to your wallet again. Platform commission remains due in your cash ledger.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Not collected')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Cash received'))]));
+                                      if (!mounted || ok != true || bloc.isClosed) return;
+                                    }
+                                    bloc.add(CompleteRideEvent(rideId: rideId, cashCollected: cash));
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blueAccent,
@@ -555,6 +560,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                                 ),
                               ),
 
+                            TripTools(rideId: rideId),
                             const SizedBox(height: 15),
 
                             SizedBox(
