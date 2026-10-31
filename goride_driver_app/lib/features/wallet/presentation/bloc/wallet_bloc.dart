@@ -1,3 +1,4 @@
+import '../../../../core/config/backend_config.dart';
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
@@ -6,7 +7,7 @@ import 'wallet_state.dart';
 import '../../data/models/transaction_model.dart';
 
 class WalletBloc extends Bloc<WalletEvent, WalletState> {
-  final String baseUrl = "http://192.168.100.168:3000/api/wallet";
+  final String baseUrl = '${BackendConfig.apiUrl}/wallet';
 
   WalletBloc() : super(WalletInitial()) {
     on<FetchWalletData>(_onFetchWalletData);
@@ -21,10 +22,10 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     try {
       final balanceRes = await http.get(
         Uri.parse("$baseUrl/balance?userId=${event.userId}"),
-      );
+      ).timeout(const Duration(seconds: 30));
       final historyRes = await http.get(
         Uri.parse("$baseUrl/history?userId=${event.userId}"),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (balanceRes.statusCode == 200 && historyRes.statusCode == 200) {
         final balanceData = jsonDecode(balanceRes.body);
@@ -58,7 +59,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           "userId": event.userId,
           "amount": event.amount,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {

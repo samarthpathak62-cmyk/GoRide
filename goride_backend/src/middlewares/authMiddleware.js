@@ -20,6 +20,7 @@ const protect = catchAsync(async (req, res, next) => {
   }
 
   req.user = user;
+  req.supabase = client;
   next();
 });
 

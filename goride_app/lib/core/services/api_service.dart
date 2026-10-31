@@ -1,10 +1,11 @@
+import '../config/backend_config.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  final String baseUrl = 'https://goride-phjs.onrender.com/api';
+  final String baseUrl = BackendConfig.apiUrl;
   final http.Client client;
   final SharedPreferences prefs;
 

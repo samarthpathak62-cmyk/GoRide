@@ -36,18 +36,22 @@ class _DriverStatusWrapperState extends State<DriverStatusWrapper> {
         } else if (_lastStatus != null) {
           return const DocumentSubmissionPage();
         }
-
-        if (state is HomeInitial || state is HomeLoading) {
-          return const Scaffold(
+        if (state is HomeError) {
+          return Scaffold(
             backgroundColor: Colors.black,
-            body: Center(child: CircularProgressIndicator(color: Color(0xff76eb07))),
+            body: Center(child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(state.message,
+                    style: TextStyle(color: Colors.white)),
+                TextButton(
+                  onPressed: () => context.read<HomeBloc>().add(FetchDriverStatusEvent()),
+                  child: const Text('Retry'),
+                ),
+              ],
+            )),
           );
         }
-
-        if (state is HomeError) {
-          return const DocumentSubmissionPage();
-        }
-
         return const Scaffold(
           backgroundColor: Colors.black,
           body: Center(child: CircularProgressIndicator(color: Color(0xff76eb07))),

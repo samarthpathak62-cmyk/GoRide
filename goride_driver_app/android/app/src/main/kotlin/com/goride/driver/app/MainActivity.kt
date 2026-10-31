@@ -1,4 +1,4 @@
-package com.goride.driver.goride_driver_app
+package com.goride.driver.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,3 +1,4 @@
+import '../config/backend_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   final http.Client client;
   final SharedPreferences prefs;
-  final String baseUrl = 'https://goride-phjs.onrender.com/api';
+  final String baseUrl = BackendConfig.apiUrl;
   Function? onUnauthorized;
 
   ApiService({required this.client, required this.prefs, this.onUnauthorized});  
@@ -54,7 +55,7 @@ class ApiService {
 
     try {
       final headers = await _headers();
-      final response = await client.get(url, headers: headers);
+      final response = await client.get(url, headers: headers).timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } catch (e) {
       print('GET Error: $e');
@@ -65,7 +66,7 @@ class ApiService {
   Future<dynamic> post(String endpoint, Map<String, dynamic> data) async {
     final url = Uri.parse('$baseUrl$endpoint');
     print('API REQUEST [POST]: $url');
-    print('DATA: ${jsonEncode(data)}');
+
 
     try {
       final headers = await _headers();
@@ -73,7 +74,7 @@ class ApiService {
         url,
         headers: headers,
         body: jsonEncode(data),
-      );
+      ).timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } catch (e) {
       print('POST Error: $e');
@@ -91,7 +92,7 @@ class ApiService {
         url,
         headers: headers,
         body: jsonEncode(data),
-      );
+      ).timeout(const Duration(seconds: 30));
       return _processResponse(response);
     } catch (e) {
       print('PATCH Error: $e');

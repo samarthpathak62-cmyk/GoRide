@@ -407,6 +407,19 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
+  void _showSocialLoginSetup(IconData icon) {
+    final provider = icon == Icons.facebook_rounded ? 'Facebook'
+        : icon == Icons.apple_rounded ? 'Apple' : 'Google';
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$provider sign-in unavailable'),
+        content: Text('$provider sign-in is not configured yet. Please use email and password for now.'),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+      ),
+    );
+  }
+
   Widget _buildSocialLogin() {
     return Row(
       children: [
@@ -428,7 +441,7 @@ class _AuthPageState extends State<AuthPage> {
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: IconButton(
-        onPressed: () {},
+        onPressed: () => _showSocialLoginSetup(icon),
         icon: Icon(icon, color: Colors.white70, size: 28),
       ),
     );

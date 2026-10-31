@@ -1,3 +1,4 @@
+import 'core/config/backend_config.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => http.Client());
 
   sl.registerLazySingleton(
-    () => SocketService(baseUrl: 'https://goride-phjs.onrender.com'),
+    () => SocketService(baseUrl: BackendConfig.origin),
   );
   sl.registerLazySingleton(() => ApiService(client: sl(), prefs: sl()));
   sl.registerLazySingleton(() => NotificationService(sl()));

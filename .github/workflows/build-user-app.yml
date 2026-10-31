@@ -2,7 +2,7 @@ name: Build User App APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, arena/f0b1026b-goride ]
   workflow_dispatch:
 
 jobs:
@@ -28,10 +28,6 @@ jobs:
         with:
           channel: 'stable'
           cache: true
-
-      - name: Fix Android application ID
-        run: |
-          sed -i 's/applicationId = "com.example.goride_app"/applicationId = "com.goride.app"/' android/app/build.gradle.kts
 
       - name: Generate Firebase options
         run: |

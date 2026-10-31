@@ -2,8 +2,8 @@ const { supabase } = require('../config/supabase');
 const AppError = require('../utils/AppError');
 
 class DriverService {
-  async submitVerification(userId, data) {
-    const { fullName, dateOfBirth, vehicleModel, vehicleType, documentUrls, city, postalCode, latitude, longitude } = data;
+  async submitVerification(userId, data, client = supabase) {
+    const { fullName, dateOfBirth, vehicleModel, vehicleType, documentUrls = {}, city, postalCode, latitude, longitude } = data;
     
     console.log('DRIVER_SERVICE: Received verification for', fullName);
     
@@ -47,9 +47,9 @@ class DriverService {
       upsertData.location = `POINT(${longitude} ${latitude})`;
     }
 
-    const { data: driver, error } = await supabase
+    const { data: driver, error } = await client
       .from('drivers')
-      .upsert(upsertData)
+      .upsert(upsertData, { onConflict: 'user_id' })
       .select()
       .single();
 
@@ -60,18 +60,18 @@ class DriverService {
     return driver;
   }
 
-  async getDriverByUserId(userId) {
-    const { data, error } = await supabase
+  async getDriverByUserId(userId, client = supabase) {
+    const { data, error } = await client
       .from('drivers')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') throw new AppError(error.message, 400);
+    if (error) throw new AppError(error.message, 400);
     return data;
   }
 
-  async updateOnlineStatus(userId, isOnline, lat, lng) {
+  async updateOnlineStatus(userId, isOnline, lat, lng, client = supabase) {
     const updateData = { 
       is_online: isOnline, 
       last_updated: new Date() 
@@ -85,7 +85,7 @@ class DriverService {
       updateData.lng = lng;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('drivers')
       .update(updateData)
       .eq('user_id', userId)

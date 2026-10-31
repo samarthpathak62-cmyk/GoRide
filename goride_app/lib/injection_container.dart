@@ -1,3 +1,4 @@
+import 'core/config/backend_config.dart';
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,7 +26,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => NotificationService(sl()));
 
   final socketService = SocketService();
-  socketService.connect('https://goride-phjs.onrender.com');
+  socketService.connect(BackendConfig.origin);
   sl.registerLazySingleton(() => socketService);
 
   sl.registerSingleton<WebRTCService>(WebRTCService(socketService: sl()));

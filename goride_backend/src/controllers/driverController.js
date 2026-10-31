@@ -1,10 +1,11 @@
+const AppError = require('../utils/AppError');
 const driverService = require('../services/driverService');
 const storageService = require('../services/storageService');
 const catchAsync = require('../utils/catchAsync');
 
 exports.submitVerification = catchAsync(async (req, res) => {
   const userId = req.user.id;
-  const driver = await driverService.submitVerification(userId, req.body);
+  const driver = await driverService.submitVerification(userId, req.body, req.supabase);
   res.status(200).json({
     status: 'success',
     data: driver
@@ -13,10 +14,10 @@ exports.submitVerification = catchAsync(async (req, res) => {
 
 exports.getDriverStatus = catchAsync(async (req, res) => {
   const userId = req.user.id;
-  const driver = await driverService.getDriverByUserId(userId);
+  const driver = await driverService.getDriverByUserId(userId, req.supabase);
   res.status(200).json({
     status: 'success',
-    data: driver
+    data: driver || { status: 'not_submitted', is_online: false }
   });
 });
 
@@ -48,7 +49,7 @@ exports.uploadDocument = catchAsync(async function uploadDocument(req, res, next
 exports.toggleOnline = catchAsync(async (req, res) => {
   const userId = req.user.id;
   const { isOnline, latitude, longitude } = req.body;
-  const driver = await driverService.updateOnlineStatus(userId, isOnline, latitude, longitude);
+  const driver = await driverService.updateOnlineStatus(userId, isOnline, latitude, longitude, req.supabase);
   res.status(200).json({
     status: 'success',
     data: driver

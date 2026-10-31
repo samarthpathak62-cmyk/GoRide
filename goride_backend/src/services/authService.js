@@ -7,7 +7,8 @@ class AuthService {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { 
+      options: {
+        emailRedirectTo: 'https://goride-phjs.onrender.com/',
         data: { 
           full_name: fullName,
           user_type: userType 

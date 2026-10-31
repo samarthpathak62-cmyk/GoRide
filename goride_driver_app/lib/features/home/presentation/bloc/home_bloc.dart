@@ -73,7 +73,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       emit(HomeLoading(isOnline: state.isOnline, verificationStatus: state.verificationStatus));
       try {
         final response = await apiService.get('/drivers/status');
-        final data = response['data'];
+        // A new driver has no verification row until documents are submitted.
+        final data = Map<String, dynamic>.from(response['data'] ?? const <String, dynamic>{});
         final isOnline = data['is_online'] ?? false;
         if (isOnline) {
           _startLocationUpdates();
