@@ -18,7 +18,7 @@ test('admin credential validation rejects missing/invalid bodies before any prov
 });
 test('a valid password session with only client-editable admin metadata is rejected',async()=>{
  fakeUser={id:'user',user_metadata:{role:'admin'}};
- await assert.rejects(sessions.passwordSession({email:'owner@example.com',password:'pass'}),/administrator credentials/);
+ await assert.rejects(sessions.passwordSession({email:'owner@example.com',password:'pass'}),/administrator access/);
  fakeUser={id:'admin',app_metadata:{role:'admin'}};
  assert.ok((await sessions.passwordSession({email:'owner@example.com',password:'pass'})).client);
 });

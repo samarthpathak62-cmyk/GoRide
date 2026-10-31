@@ -15,7 +15,7 @@ exports.login=catchAsync(async(req,res)=>{
   return res.status(202).json({setupRequired:true,factorId:enrollment.id,qrCode:enrollment.totp.qr_code,secret:enrollment.totp.secret,
    setupToken:data.session.access_token,refreshToken:data.session.refresh_token});
  }
- if(!req.body.code) return res.status(202).json({mfaRequired:true,message:'Enter the six-digit code from your authenticator, then sign in again.'});
+ if(!req.body.code) return res.status(202).json({mfaRequired:true,factorId:factor.id,setupToken:data.session.access_token,refreshToken:data.session.refresh_token,message:'Open your authenticator app and enter the six-digit GoRide Admin code. This is not an email or SMS OTP.'});
  if(!/^\d{6}$/.test(req.body.code)) throw new AppError('Enter a six-digit authenticator code.',400);
  const {data:challenge,error:challengeError}=await client.auth.mfa.challenge({factorId:factor.id});
  if(challengeError) throw new AppError('Could not create MFA challenge.',401);

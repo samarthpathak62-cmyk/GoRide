@@ -121,3 +121,19 @@ identify requirements vs saved-draft vs status loading; a missing draft schema
 returns `ONBOARDING_SCHEMA_MISSING` instead of the generic black-page message.
 `GET /health` now reports `apiVersion: 2` and Render's deployed commit, if supplied.
 Live schema checks do not replace a real device submission and admin review test.
+
+### Verified-owner login repair and simpler MFA flow
+A live verified owner was found with an active, correctly bound grant but no trusted
+`app_metadata.role`. Migration 005 repairs bound verified active grants and includes
+metadata updates in the activation trigger, so an auth-provider metadata rewrite
+cannot silently erase a reserved admin role. This repair was applied live and the
+authorised owner was rechecked as verified + admin + correctly bound. It does not
+change any password, disable verification, or remove MFA.
+
+The initial login page now asks only email/password. Both new enrollment and an
+existing authenticator use a separate second step, with AAL1 credentials kept only
+in memory. New users get same-phone manual-key instructions as well as a QR;
+returning users see neither a QR nor a setup key. The text explicitly distinguishes
+authenticator codes from SMS/email OTP. Successful password login without admin
+access is reported separately from incorrect credentials. Actual password login
+and authenticator completion must still be performed privately by the user.

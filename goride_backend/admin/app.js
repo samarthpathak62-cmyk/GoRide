@@ -11,15 +11,21 @@ async function api(path,body,accessToken=token){
 }
 function clearSetup(){if(qrUrl)URL.revokeObjectURL(qrUrl);qrUrl=null;setup=null;$('mfa-qr').removeAttribute('src');$('mfa-secret').textContent='';$('enroll-code').value='';}
 function showSection(id){for(const key of ['login','register','enroll','activate','dashboard'])$(key).hidden=key!==id;}
-function signOut(){token='';clearSetup();activation=null;selected=null;applications=[];$('detail').replaceChildren();$('applications').replaceChildren();$('accounts').replaceChildren();$('password').value='';$('code').value='';showSection('login');$('logout').hidden=true;}
-$('logout').onclick=signOut;
+function signOut(){token='';clearSetup();activation=null;selected=null;applications=[];$('detail').replaceChildren();$('applications').replaceChildren();$('accounts').replaceChildren();$('password').value='';showSection('login');$('logout').hidden=true;}
+$('logout').onclick=signOut;$('mfa-back').onclick=()=>{signOut();notify('Enter your email and password to continue.');};
 $('show-register').onclick=()=>showSection('register');$('back-login').onclick=()=>showSection('login');
-async function openDashboard(data){if(typeof data.token!=='string'||!data.token)throw Error('No verified administrator session returned.');token=data.token;clearSetup();$('password').value='';$('code').value='';showSection('dashboard');$('logout').hidden=false;accountsPage=1;await load();await loadAccounts();await loadPayments();}
+async function openDashboard(data){if(typeof data.token!=='string'||!data.token)throw Error('No verified administrator session returned.');token=data.token;clearSetup();$('password').value='';showSection('dashboard');$('logout').hidden=false;accountsPage=1;await load();await loadAccounts();await loadPayments();}
 $('login-form').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;notify('Checking credentials…');try{
- const data=await api('/session',{email:$('email').value,password:$('password').value,code:$('code').value});
- if(data.setupRequired){clearSetup();setup=data;showSection('enroll');$('password').value='';$('logout').hidden=false;
-  qrUrl=URL.createObjectURL(new Blob([data.qrCode],{type:'image/svg+xml'}));$('mfa-qr').src=qrUrl;$('mfa-secret').textContent=data.secret;notify('Scan the QR code and verify one authenticator code.');
- }else if(data.mfaRequired){$('code').focus();notify(data.message);}else await openDashboard(data);
+ const data=await api('/session',{email:$('email').value,password:$('password').value});
+ if(data.setupRequired||data.mfaRequired){clearSetup();setup=data;showSection('enroll');$('password').value='';$('logout').hidden=false;
+  $('mfa-qr').hidden=!data.setupRequired;$('mfa-key-label').hidden=!data.setupRequired;
+  $('mfa-title').textContent=data.setupRequired?'Secure your account — one-time setup':'Verify it is you';
+  $('mfa-help').textContent=data.setupRequired
+   ? 'Install Google Authenticator or Microsoft Authenticator. In that app tap +, then Enter setup key, name it GoRide Admin, and paste the key below (choose Time based). On another device you can scan this QR instead. Then enter the changing six-digit code here. This is NOT an email or SMS OTP. Keep the setup key private.'
+   : 'Open the authenticator app you previously linked to GoRide Admin. Enter its current six-digit code below. No email or SMS will be sent. If you lost access to that app, contact the project owner; creating a new account will not reset it.';
+  if(data.setupRequired){qrUrl=URL.createObjectURL(new Blob([data.qrCode],{type:'image/svg+xml'}));$('mfa-qr').src=qrUrl;$('mfa-secret').textContent=data.secret;}
+  notify('Email and password accepted. Complete the security step above.');
+ }else await openDashboard(data);
 }catch(e){notify(e.message);}finally{button.disabled=false;}};
 $('owner-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{
  const data=await api('/register-owner',{email:$('owner-email').value,password:$('owner-password').value},'');

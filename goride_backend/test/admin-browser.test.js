@@ -23,12 +23,18 @@ test('first sign-in shows MFA enrollment without treating HTTP202 as full admin 
  b.nodes.get('logout').onclick();assert.equal(vm.runInContext('token',b.context),'');assert.equal(b.nodes.get('dashboard').hidden,true);
 });
 test('existing authenticator prompt never requests protected dashboard data',async()=>{
- const b=browser();b.setResponses({mfaRequired:true,message:'Enter code'});await b.submit('login-form');
- assert.equal(b.calls.length,1);assert.equal(b.nodes.get('dashboard').hidden,true);assert.equal(b.nodes.get('message').textContent,'Enter code');
+ const b=browser();b.setResponses({mfaRequired:true,factorId:'existing',setupToken:'aal1',refreshToken:'refresh'});await b.submit('login-form');
+ assert.equal(b.calls.length,1);assert.equal(b.nodes.get('dashboard').hidden,true);assert.equal(b.nodes.get('enroll').hidden,false);assert.equal(b.nodes.get('mfa-qr').hidden,true);assert.equal(b.nodes.get('mfa-key-label').hidden,true);assert.equal(b.nodes.get('mfa-secret').textContent,'');
 });
 test('invitation fragment is removed and is bound to password activation request only',async()=>{
  const b=browser('#type=invite&access_token=invite-token&refresh_token=invite-refresh');assert.ok(b.isCleaned());assert.equal(b.nodes.get('activate').hidden,false);
  b.nodes.get('activate-password').value='own-private-password';b.setResponses({message:'Password saved'});await b.submit('activate-form');
  assert.equal(b.calls[0].url,'/api/admin/activate');assert.equal(b.calls[0].headers.Authorization,'Bearer invite-token');assert.equal(b.nodes.get('activate-password').value,'');
  assert.equal(vm.runInContext('token',b.context),'');assert.equal(vm.runInContext('activation',b.context),null);
+});
+
+test('login has no unexplained OTP field and explains same-phone authenticator setup',()=>{
+ assert.ok(!html.includes('id="code"'));
+ assert.ok(script.includes('Enter setup key'));
+ assert.ok(script.includes('NOT an email or SMS OTP'));
 });

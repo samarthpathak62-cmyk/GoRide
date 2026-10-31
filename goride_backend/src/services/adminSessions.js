@@ -12,7 +12,10 @@ function credentials(body = {}) {
 async function passwordSession(body) {
  const input=credentials(body),client=newClient();
  const {data,error}=await client.auth.signInWithPassword(input);
- if(error||!isAdmin(data?.user)) throw new AppError('Invalid administrator credentials, unverified email or no admin access.',401);
+ if(error) throw new AppError(error.code==='email_not_confirmed'
+  ? 'Please verify your email using the confirmation link before signing in.'
+  : 'Email or password is incorrect. Use the password you chose when creating your account.',401);
+ if(!isAdmin(data?.user)) throw new AppError('Your login is valid, but administrator access is not active. Contact the project owner to check your admin grant.',403);
  return {client,data};
 }
 async function bindSession(req) {

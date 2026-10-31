@@ -16,3 +16,4 @@
 -- Captain onboarding and private review (coordinate backend deployment)
 \i migrations/202610310003_captain_onboarding.sql
 \i migrations/202610310004_admin_accounts.sql
+\i migrations/202610310005_admin_claim_repair.sql
