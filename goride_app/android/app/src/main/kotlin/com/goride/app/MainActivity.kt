@@ -1,4 +1,4 @@
-package com.example.goride_app
+package com.goride.app
 
 import io.flutter.embedding.android.FlutterActivity
 

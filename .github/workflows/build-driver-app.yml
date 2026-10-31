@@ -29,10 +29,6 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Fix Android application ID
-        run: |
-          sed -i 's/applicationId = "com.goride.driver.goride_driver_app"/applicationId = "com.goride.driver.app"/' android/app/build.gradle.kts
-
       - name: Generate Firebase options
         run: |
           cat > lib/firebase_options.dart <<'EOF'
