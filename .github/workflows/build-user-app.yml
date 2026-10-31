@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: goride_app
@@ -27,6 +28,64 @@ jobs:
         with:
           channel: 'stable'
           cache: true
+
+      - name: Fix Android application ID
+        run: |
+          sed -i 's/applicationId = "com.example.goride_app"/applicationId = "com.goride.app"/' android/app/build.gradle.kts
+
+      - name: Generate Firebase options
+        run: |
+          cat > lib/firebase_options.dart <<'EOF'
+          // File generated automatically by GitHub Actions.
+          // Do not edit manually.
+
+          import 'package:firebase_core/firebase_core.dart';
+          import 'package:flutter/foundation.dart'
+              show defaultTargetPlatform, kIsWeb, TargetPlatform;
+
+          class DefaultFirebaseOptions {
+            static FirebaseOptions get currentPlatform {
+              if (kIsWeb) {
+                throw UnsupportedError(
+                  'DefaultFirebaseOptions have not been configured for web.',
+                );
+              }
+
+              switch (defaultTargetPlatform) {
+                case TargetPlatform.android:
+                  return android;
+                case TargetPlatform.iOS:
+                  throw UnsupportedError(
+                    'DefaultFirebaseOptions have not been configured for iOS.',
+                  );
+                case TargetPlatform.macOS:
+                  throw UnsupportedError(
+                    'DefaultFirebaseOptions have not been configured for macOS.',
+                  );
+                case TargetPlatform.windows:
+                  throw UnsupportedError(
+                    'DefaultFirebaseOptions have not been configured for Windows.',
+                  );
+                case TargetPlatform.linux:
+                  throw UnsupportedError(
+                    'DefaultFirebaseOptions have not been configured for Linux.',
+                  );
+                default:
+                  throw UnsupportedError(
+                    'DefaultFirebaseOptions are not supported for this platform.',
+                  );
+              }
+            }
+
+            static const FirebaseOptions android = FirebaseOptions(
+              apiKey: 'AIzaSyAfDZ4ghUIJMG58KKSjIkT79xZ0PjEh-0A',
+              appId: '1:1046643741285:android:6059a6e5e975cb2ccd2c8c',
+              messagingSenderId: '1046643741285',
+              projectId: 'goride-1bd25',
+              storageBucket: 'goride-1bd25.firebasestorage.app',
+            );
+          }
+          EOF
 
       - name: Install dependencies
         run: flutter pub get
