@@ -1,10 +1,9 @@
-const { supabase } = require('../config/supabase');
 
 class WalletController {
   async getBalance(req, res, next) {
     try {
-      const { userId } = req.query;
-      const { data, error } = await supabase
+      const userId = req.user.id;
+      const { data, error } = await req.supabase
         .from('profiles')
         .select('wallet_balance')
         .eq('id', userId)
@@ -19,8 +18,8 @@ class WalletController {
 
   async getTransactionHistory(req, res, next) {
     try {
-      const { userId } = req.query;
-      const { data, error } = await supabase
+      const userId = req.user.id;
+      const { data, error } = await req.supabase
         .from('transactions')
         .select('*')
         .eq('user_id', userId)
@@ -35,38 +34,14 @@ class WalletController {
 
   async topup(req, res, next) {
     try {
-      const { userId, amount } = req.body;
-      
-      const { data, error } = await supabase.rpc('topup_wallet', {
-        p_user_id: userId,
-        p_amount: amount
-      });
-
-      if (error) throw error;
-      res.json({ message: 'Top-up successful', balance: data });
-    } catch (error) {
-      next(error);
-    }
+      const data = await require('../config/payments').createLink(req.user.id, req.body.amount);
+      res.status(201).json(data);
+    } catch (error) { next(error); }
   }
 
   async payout(req, res, next) {
-    try {
-      const { userId, amount } = req.body;
-
-      if (amount < 500) {
-        return res.status(400).json({ message: 'Minimum payout amount is Rs. 500' });
-      }
-
-      const { data, error } = await supabase.rpc('request_payout', {
-        p_user_id: userId,
-        p_amount: amount
-      });
-
-      if (error) throw error;
-      res.json({ message: 'Payout request processed', balance: data });
-    } catch (error) {
-      next(error);
-    }
+    // A ledger debit is not a bank transfer. Do not pretend that it is.
+    res.status(503).json({ message: 'Bank payouts are not configured yet. Your balance has not been deducted.' });
   }
 }
 

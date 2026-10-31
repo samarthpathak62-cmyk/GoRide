@@ -5,7 +5,7 @@ const rideController = require('../controllers/rideController');
 const { protect } = require('../middlewares/authMiddleware');
 
 router.get('/explore/data', protect, rideController.getExploreData);
-router.post('/rides/request', rideController.requestRide);
+router.post('/rides/request', protect, rideController.requestRide);
 router.post('/rides/accept', rideController.acceptRide);
 router.post('/rides/confirm', rideController.confirmRide);
 router.post('/rides/reject', rideController.rejectDriver);

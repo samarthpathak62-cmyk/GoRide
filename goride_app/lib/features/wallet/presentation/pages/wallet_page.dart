@@ -14,11 +14,24 @@ class WalletPage extends StatefulWidget {
   State<WalletPage> createState() => _WalletPageState();
 }
 
-class _WalletPageState extends State<WalletPage> {
+class _WalletPageState extends State<WalletPage> with WidgetsBindingObserver {
+  WalletLoaded? _lastWallet;
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _refreshWallet();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshWallet();
   }
 
   void _refreshWallet() {
@@ -35,9 +48,9 @@ class _WalletPageState extends State<WalletPage> {
       body: SafeArea(
         child: BlocConsumer<WalletBloc, WalletState>(
           listener: (context, state) {
-            if (state is TopUpSuccess) {
+            if (state is PaymentCheckoutOpened) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message), backgroundColor: const Color(0xff76eb07)),
+                SnackBar(content: Text('Complete payment in the browser, then return and refresh. Balance updates only after payment verification.'), backgroundColor: const Color(0xff76eb07)),
               );
             } else if (state is WalletError) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -46,8 +59,9 @@ class _WalletPageState extends State<WalletPage> {
             }
           },
           builder: (context, state) {
-            double balance = 0.0;
-            List transactions = [];
+            if (state is WalletLoaded) _lastWallet = state;
+            double balance = _lastWallet?.balance ?? 0.0;
+            List transactions = _lastWallet?.transactions ?? [];
             bool isLoading = state is WalletLoading;
 
             if (state is WalletLoaded) {
@@ -148,11 +162,26 @@ class _WalletPageState extends State<WalletPage> {
                                 onTap: () => _showTopUpDialog(context),
                               ),
                               const SizedBox(width: 25),
-                              _buildQuickAction(Icons.send_rounded, "Send"),
+                              _buildQuickAction(Icons.send_rounded, 'Send', onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                  content: Text('Wallet transfers are not available yet. No money has been sent.'),
+                                ));
+                              }),
                               const SizedBox(width: 25),
                               _buildQuickAction(
                                 Icons.history_toggle_off_rounded,
                                 "History",
+                                onTap: () => showModalBottomSheet(
+                                  context: context,
+                                  builder: (_) => SafeArea(child: ListView(
+                                    padding: const EdgeInsets.all(20),
+                                    children: transactions.isEmpty ? [const Text('No transactions yet.')]
+                                      : transactions.map<Widget>((tx) => ListTile(
+                                        title: Text(tx.title), subtitle: Text(tx.date),
+                                        trailing: Text('INR ${tx.amount}'),
+                                      )).toList(),
+                                  )),
+                                ),
                               ),
                             ],
                           ),
@@ -207,7 +236,7 @@ class _WalletPageState extends State<WalletPage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xff1a1a1a),
-        title: Text("Top Up Wallet", style: GoogleFonts.poppins(color: Colors.white)),
+        title: Text("Add money (INR)", style: GoogleFonts.poppins(color: Colors.white)),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
@@ -231,7 +260,7 @@ class _WalletPageState extends State<WalletPage> {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xff76eb07)),
-            child: const Text("Top Up", style: TextStyle(color: Colors.black)),
+            child: const Text("Continue to secure payment", style: TextStyle(color: Colors.black)),
           ),
         ],
       ),

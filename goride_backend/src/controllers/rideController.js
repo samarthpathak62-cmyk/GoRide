@@ -48,7 +48,7 @@ exports.getExploreData = async (req, res) => {
 
 exports.requestRide = async (req, res) => {
   try {
-    const ride = await rideService.requestRide(req.body);
+    const ride = await rideService.requestRide({ ...req.body, userId: req.user.id });
     const nearbyDrivers = await rideService.getNearbyDrivers(req.body.pickupLatitude, req.body.pickupLongitude);
 
     const { data: passengerProfile } = await supabase

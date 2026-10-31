@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/config/backend_config.dart';
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +9,12 @@ import '../../data/models/transaction_model.dart';
 
 class WalletBloc extends Bloc<WalletEvent, WalletState> {
   final String baseUrl = '${BackendConfig.apiUrl}/wallet';
+
+  Future<Map<String, String>> _headers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    return {'Content-Type': 'application/json', if (token != null) 'Authorization': 'Bearer $token'};
+  }
 
   WalletBloc() : super(WalletInitial()) {
     on<FetchWalletData>(_onFetchWalletData);
@@ -21,10 +28,10 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     emit(WalletLoading());
     try {
       final balanceRes = await http.get(
-        Uri.parse("$baseUrl/balance?userId=${event.userId}"),
+        Uri.parse("$baseUrl/balance"), headers: await _headers(),
       ).timeout(const Duration(seconds: 30));
       final historyRes = await http.get(
-        Uri.parse("$baseUrl/history?userId=${event.userId}"),
+        Uri.parse("$baseUrl/history"), headers: await _headers(),
       ).timeout(const Duration(seconds: 30));
 
       if (balanceRes.statusCode == 200 && historyRes.statusCode == 200) {
@@ -54,7 +61,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/payout"),
-        headers: {"Content-Type": "application/json"},
+        headers: await _headers(),
         body: jsonEncode({
           "userId": event.userId,
           "amount": event.amount,

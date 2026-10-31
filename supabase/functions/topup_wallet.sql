@@ -1,16 +1,8 @@
-CREATE OR REPLACE FUNCTION topup_wallet(p_user_id UUID, p_amount NUMERIC)
-RETURNS NUMERIC AS $$
-DECLARE
-    v_new_balance NUMERIC;
+-- Unverified client top-ups are intentionally disabled.
+CREATE OR REPLACE FUNCTION public.topup_wallet(p_user_id UUID, p_amount NUMERIC)
+RETURNS NUMERIC LANGUAGE plpgsql AS $$
 BEGIN
-    UPDATE public.profiles 
-    SET wallet_balance = wallet_balance + p_amount 
-    WHERE id = p_user_id
-    RETURNING wallet_balance INTO v_new_balance;
-
-    INSERT INTO public.transactions (user_id, amount, type, category, description)
-    VALUES (p_user_id, p_amount, 'credit', 'topup', 'Wallet top-up');
-
-    RETURN v_new_balance;
+  RAISE EXCEPTION 'Direct top-up disabled. Use verified payment checkout.';
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+REVOKE ALL ON FUNCTION public.topup_wallet(UUID, NUMERIC) FROM PUBLIC, anon, authenticated;

@@ -1,3 +1,6 @@
+import '../../../wallet/presentation/bloc/wallet_bloc.dart';
+import '../../../wallet/presentation/bloc/wallet_state.dart';
+import '../../../wallet/presentation/bloc/wallet_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -268,6 +271,9 @@ class ProfilePage extends StatelessWidget {
   }
 
   void _showPaymentMethodsSheet(BuildContext context) {
+    final wallet = context.read<WalletBloc>();
+    final user = context.read<AuthBloc>().state.currentUser;
+    if (user != null) wallet.add(FetchWalletData(userId: user.id));
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xff0a0a0a),
@@ -289,10 +295,18 @@ class ProfilePage extends StatelessWidget {
                 style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 20),
-              _paymentChannelTile(Icons.account_balance_wallet_rounded, "GoRide Cash", "Balance: Rs. 0.00", isPrimary: true),
-              _paymentChannelTile(Icons.credit_card_rounded, "Credit/Debit Card", "Link your card for instant payments"),
-              _paymentChannelTile(Icons.phone_android_rounded, "Mobile Wallets", "JazzCash / EasyPaisa supported"),
-              _paymentChannelTile(Icons.money_rounded, "Cash on Hand", "Default ride payment method"),
+              BlocBuilder<WalletBloc, WalletState>(
+                bloc: wallet,
+                builder: (context, state) => _paymentChannelTile(
+                  Icons.account_balance_wallet_rounded, 'GoRide wallet',
+                  state is WalletLoaded ? 'Balance: INR ${state.balance.toStringAsFixed(2)}'
+                    : state is WalletError ? 'Balance unavailable — refresh Wallet' : 'Loading balance...',
+                  isPrimary: true,
+                ),
+              ),
+              _paymentChannelTile(Icons.credit_card_rounded, "Credit/Debit Card", "Available through secure checkout after gateway setup"),
+              _paymentChannelTile(Icons.phone_android_rounded, "Mobile Wallets", "Not configured"),
+              _paymentChannelTile(Icons.money_rounded, "Cash on Hand", "Cash booking is not enabled yet"),
               const SizedBox(height: 10),
             ],
           ),

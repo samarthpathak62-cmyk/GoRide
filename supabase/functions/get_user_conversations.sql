@@ -28,6 +28,6 @@ BEGIN
         lm.created_at
     FROM LatestMessages lm
     JOIN public.profiles p ON p.id = lm.other_id
-    ORDER BY lm.last_message_time DESC;
+    ORDER BY lm.created_at DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

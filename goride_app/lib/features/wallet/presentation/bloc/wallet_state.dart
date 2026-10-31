@@ -23,3 +23,8 @@ class TopUpSuccess extends WalletState {
   final String message;
   const TopUpSuccess(this.message);
 }
+
+/// Opening checkout does not mean that payment succeeded.
+class PaymentCheckoutOpened extends WalletState {
+  const PaymentCheckoutOpened();
+}

@@ -1,6 +1,7 @@
 const { supabase } = require('../config/supabase');
 const { getDistance } = require('geolib');
 const fareService = require('./fareService');
+const AppError = require('../utils/AppError');
 
 class RideService {
   async requestRide(rideData) {
@@ -9,6 +10,10 @@ class RideService {
       pickupLatitude, pickupLongitude, dropLatitude, dropLongitude
     } = rideData;
 
+    if (![pickupLatitude, pickupLongitude, dropLatitude, dropLongitude].every(v => typeof v === 'number' && Number.isFinite(v)) ||
+        Math.abs(pickupLatitude) > 90 || Math.abs(dropLatitude) > 90 || Math.abs(pickupLongitude) > 180 || Math.abs(dropLongitude) > 180) {
+      throw new AppError('Choose valid pickup and destination locations.', 400);
+    }
     const distance = getDistance(
       { latitude: pickupLatitude, longitude: pickupLongitude },
       { latitude: dropLatitude, longitude: dropLongitude }
@@ -24,7 +29,7 @@ class RideService {
 
     if (profileError) throw profileError;
     if (profile.wallet_balance < calculatedFare) {
-      throw new Error('Insufficient wallet balance. Please top up.');
+      throw new AppError(`Wallet balance INR ${Number(profile.wallet_balance).toFixed(2)} is below this ride fare INR ${calculatedFare.toFixed(2)}. Please add the difference after online payments are enabled.`, 400);
     }
 
     const { data, error } = await supabase

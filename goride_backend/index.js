@@ -30,6 +30,13 @@ app.set('io', io);
 global.io = io; 
 
 app.use(cors());
+// Signature verification requires the unmodified request bytes.
+app.post('/api/wallet/webhook', express.raw({ type: 'application/json', limit: '256kb' }), async (req, res, next) => {
+  try {
+    await require('./src/config/payments').webhook(req.body, req.get('x-razorpay-signature'));
+    res.json({ received: true });
+  } catch (error) { next(error); }
+});
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(logger);
