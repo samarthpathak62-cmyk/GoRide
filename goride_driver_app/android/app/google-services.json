@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1046643741285",
+    "project_id": "goride-1bd25",
+    "storage_bucket": "goride-1bd25.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1046643741285:android:6059a6e5e975cb2ccd2c8c",
+        "android_client_info": {
+          "package_name": "com.goride.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfDZ4ghUIJMG58KKSjIkT79xZ0PjEh-0A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1046643741285:android:bd5f501d0ffaedfdcd2c8c",
+        "android_client_info": {
+          "package_name": "com.goride.driver.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfDZ4ghUIJMG58KKSjIkT79xZ0PjEh-0A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
