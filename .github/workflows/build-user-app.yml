@@ -2,7 +2,7 @@ name: Build User App APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, arena/f0b1026b-goride ]
   workflow_dispatch:
 
 jobs:
