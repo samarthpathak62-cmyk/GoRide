@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.goride.driver.goride_driver_app"
+    namespace = "com.goride.driver.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
