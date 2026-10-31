@@ -176,7 +176,7 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
                   !pLat.isFinite || !pLng.isFinite || !dLat.isFinite || !dLng.isFinite ||
                   pLat.abs() > 90 || dLat.abs() > 90 || pLng.abs() > 180 || dLng.abs() > 180 ||
                   (pLat == 0 && pLng == 0) || (dLat == 0 && dLng == 0)) {
-                emit(const ExploreError(message: 'Trip coordinates unavailable. Refresh or contact GoRide help; no substitute location will be shown.'));
+                emit(ExploreError(message: 'Trip coordinates unavailable. Refresh or contact GoRide help; no substitute location will be shown.'));
                 return;
               }
 
