@@ -64,3 +64,8 @@ secure mobile token storage/refresh, production routing/map credentials, staffed
 support/safety, large-scale matching, durable notification outbox, performance and
 penetration testing. These require further implementation or real external setup;
 no successful provider operation is fabricated.
+
+Final UX checks also remove legacy fabricated pickup/drop coordinates in active
+trip recovery and the unused search-card callback. Captain marker waits for actual
+location updates, rather than being fabricated at pickup. Captain profile now
+opens account-scoped trip history with receipts/support tools for completed trips.

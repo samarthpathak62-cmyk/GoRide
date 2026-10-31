@@ -38,39 +38,23 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   bool _isStarted = false;
   bool _isCompleted = false;
   bool _starting = false;
+  bool _hasRoute = false;
 
   @override
   void initState() {
     super.initState();
-    print("DEBUG: ActiveRidePage rideData: ${widget.rideData}");
-    double lat =
-        (widget.rideData['pickupLat'] ??
-                widget.rideData['pickup_latitude'] ??
-                31.5691901)
-            .toDouble();
-    double lng =
-        (widget.rideData['pickupLng'] ??
-                widget.rideData['pickup_longitude'] ??
-                74.3824455)
-            .toDouble();
-    if (lat == 0) lat = 31.5691901;
-    if (lng == 0) lng = 74.3824455;
-    _pickupLocation = LatLng(lat, lng);
-
-    double dLat =
-        (widget.rideData['dropLat'] ??
-                widget.rideData['drop_latitude'] ??
-                31.469)
-            .toDouble();
-    double dLng =
-        (widget.rideData['dropLng'] ??
-                widget.rideData['drop_longitude'] ??
-                74.282)
-            .toDouble();
-    if (dLat == 0) dLat = 31.469;
-    if (dLng == 0) dLng = 74.282;
-    _dropLocation = LatLng(dLat, dLng);
-    _driverLocation = _pickupLocation;
+    final lat = (widget.rideData['pickupLat'] ?? widget.rideData['pickup_latitude']) as num?;
+    final lng = (widget.rideData['pickupLng'] ?? widget.rideData['pickup_longitude']) as num?;
+    final dLat = (widget.rideData['dropLat'] ?? widget.rideData['drop_latitude']) as num?;
+    final dLng = (widget.rideData['dropLng'] ?? widget.rideData['drop_longitude']) as num?;
+    if (lat == null || lng == null || dLat == null || dLng == null ||
+        !lat.isFinite || !lng.isFinite || !dLat.isFinite || !dLng.isFinite ||
+        lat.abs() > 90 || dLat.abs() > 90 || lng.abs() > 180 || dLng.abs() > 180 ||
+        (lat == 0 && lng == 0) || (dLat == 0 && dLng == 0)) return;
+    _pickupLocation = LatLng(lat.toDouble(), lng.toDouble());
+    _dropLocation = LatLng(dLat.toDouble(), dLng.toDouble());
+    _hasRoute = true;
+    // No captain marker until a real location update arrives.
 
     final status = (widget.rideData['status'] ?? "").toString().toLowerCase();
     if (status == 'accepted' || status == 'driver_arrived' || status == 'started') {
@@ -96,7 +80,13 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
         widget.rideData['_id'] ??
         "";
 
-    print("DEBUG: ActiveRidePage computed rideId: '$rideId'");
+    if (!_hasRoute) return Scaffold(
+      appBar: AppBar(title: const Text('Trip location unavailable')),
+      body: Padding(padding: const EdgeInsets.all(24), child: Column(children: [
+        const Text('Pickup/drop coordinates are missing. Return home and refresh the trip or contact help. No substitute location will be shown.'),
+        TripTools(rideId: rideId.toString()),
+      ])),
+    );
 
     return BlocProvider(
       create: (context) =>

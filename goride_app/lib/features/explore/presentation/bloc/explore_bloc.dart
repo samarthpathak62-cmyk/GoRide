@@ -168,15 +168,17 @@ class ExploreBloc extends Bloc<ExploreEvent, ExploreState> {
             if (driver != null) emit(RideProposed(driver: driver, rideId: rideId));
           } else if (status == 'accepted' || status == 'started' || status == 'arrived' || status == 'driver_arrived') {
             if (driver != null) {
-              double pLat = (data['pickup_latitude'] ?? 31.5691901).toDouble();
-              double pLng = (data['pickup_longitude'] ?? 74.3824455).toDouble();
-              double dLat = (data['drop_latitude'] ?? 31.469).toDouble();
-              double dLng = (data['drop_longitude'] ?? 74.282).toDouble();
-
-              if (pLat == 0) pLat = 31.5691901;
-              if (pLng == 0) pLng = 74.3824455;
-              if (dLat == 0) dLat = 31.469;
-              if (dLng == 0) dLng = 74.282;
+              final pLat = (data['pickup_latitude'] as num?)?.toDouble();
+              final pLng = (data['pickup_longitude'] as num?)?.toDouble();
+              final dLat = (data['drop_latitude'] as num?)?.toDouble();
+              final dLng = (data['drop_longitude'] as num?)?.toDouble();
+              if (pLat == null || pLng == null || dLat == null || dLng == null ||
+                  !pLat.isFinite || !pLng.isFinite || !dLat.isFinite || !dLng.isFinite ||
+                  pLat.abs() > 90 || dLat.abs() > 90 || pLng.abs() > 180 || dLng.abs() > 180 ||
+                  (pLat == 0 && pLng == 0) || (dLat == 0 && dLng == 0)) {
+                emit(const ExploreError(message: 'Trip coordinates unavailable. Refresh or contact GoRide help; no substitute location will be shown.'));
+                return;
+              }
 
               emit(RideAccepted(
                 driver: driver, 

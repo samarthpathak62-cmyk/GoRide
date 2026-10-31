@@ -10,7 +10,7 @@ class LocationSearchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        onLocationSelected(31.5691, 74.3824);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Choose a real destination using the destination search.')));
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),

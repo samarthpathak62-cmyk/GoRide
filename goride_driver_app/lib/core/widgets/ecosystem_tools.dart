@@ -61,3 +61,38 @@ class _EcosystemSupportPageState extends State<EcosystemSupportPage> {
     const SizedBox(height:20), const Text('Your latest requests'),..._tickets.map((t)=>Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text("${t['category']} · ${t['status']}"),Text(t['message']),if(t['reply']!=null)Text("GoRide: ${t['reply']}"),Text(t['created_at'])])))),
   ]));
 }
+
+
+/// Account-scoped captain history; the server derives captain identity from JWT.
+class CaptainTripHistoryPage extends StatefulWidget {
+  const CaptainTripHistoryPage({super.key});
+  @override State<CaptainTripHistoryPage> createState() => _CaptainTripHistoryPageState();
+}
+class _CaptainTripHistoryPageState extends State<CaptainTripHistoryPage> {
+  List<dynamic> _trips=[];
+  String? _error;
+  bool _loading=true;
+  @override void initState(){super.initState();_load();}
+  Future<void> _load() async {
+    setState((){_loading=true;_error=null;});
+    try {
+      final r=await di.sl<ApiService>().get('/rides/history?driverId=me');
+      if(mounted)setState(()=>_trips=r['data'] as List);
+    } catch(e){if(mounted)setState(()=>_error=e.toString());}
+    finally {if(mounted)setState(()=>_loading=false);}
+  }
+  @override Widget build(BuildContext context)=>Scaffold(
+    appBar:AppBar(title:const Text('Your latest trips'),actions:[IconButton(onPressed:_loading?null:_load,icon:const Icon(Icons.refresh))]),
+    body:_loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.all(16),children:[
+      if(_error!=null)Text(_error!),
+      if(_trips.isEmpty&&_error==null)const Text('No captain trips yet.'),
+      ..._trips.map((t)=>Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text("${t['category']} · ${t['status']} · INR ${t['fare']}"),
+        Text("${t['pickup_address']} → ${t['drop_address']}"),
+        Text("${t['payment_method']??'wallet'} · ${t['payment_status']??'unpaid'}"),
+        Text(t['created_at'].toString()),TripTools(rideId:t['id'].toString()),
+      ])))),
+      const Text('Latest 100 trips. Receipts are available for completed paid trips only.'),
+    ]),
+  );
+}

@@ -1,3 +1,4 @@
+import '../../../../core/widgets/ecosystem_tools.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -148,6 +149,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
                       const SizedBox(height: 30),
                       _buildMenuSection("App & Support", [
+                        _buildMenuItem("Trip history & receipts", Icons.receipt_long_outlined,
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CaptainTripHistoryPage())),
+                        ),
                         _buildMenuItem(
                           "Support & Help", 
                           Icons.help_outline_rounded,
