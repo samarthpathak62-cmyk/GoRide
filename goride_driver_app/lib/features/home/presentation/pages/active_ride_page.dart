@@ -160,10 +160,11 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                     children: [
                       TileLayer(
                         urlTemplate:
-                            'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                        subdomains: const ['a', 'b', 'c', 'd'],
-                        userAgentPackageName: 'com.goride.driver.goride_driver_app',
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+
+                        userAgentPackageName: 'com.goride.driver.app',
                       ),
+                      const SafeArea(child: SimpleAttributionWidget(alignment: Alignment.topRight,source: Text('OpenStreetMap contributors'))),
                       PolylineLayer(
                         polylines: [
                           Polyline(
@@ -300,8 +301,8 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                                     ),
                                   ),
                                   Text(
-                                    _isStarted 
-                                        ? "Heading to Dropoff" 
+                                    _isStarted
+                                        ? "Heading to Dropoff"
                                         : (_isArrived ? "At Pickup Location" : "Heading to Pickup"),
                                     style: GoogleFonts.outfit(
                                       color: Colors.white,
@@ -459,7 +460,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
                             ),
 
 
-                            
+
                             const SizedBox(height: 20),
                             if (!_isArrived)
                               SizedBox(

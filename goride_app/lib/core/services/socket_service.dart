@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart';
@@ -97,13 +98,15 @@ class SocketService {
   }
 
 
-  void sendMessage(String receiverId, String text, {String? imageUrl}) {
-    emit('send_message', {
-      'senderId': _userId, 
-      'receiverId': receiverId,
-      'text': text,
-      'imageUrl': imageUrl ?? "",
+  Future<void> sendMessage(String receiverId, String text, {String? imageUrl}) async {
+    if (_socket?.connected != true) throw Exception('Chat is disconnected. Reconnect before sending.');
+    final completed=Completer<void>();
+    _socket!.emitWithAck('send_message',{'receiverId':receiverId,'text':text,'imageUrl':imageUrl ?? ''},ack:(data){
+      if(completed.isCompleted)return;
+      if(data is Map && data['success']==true) completed.complete();
+      else completed.completeError(Exception(data is Map ? data['error'] ?? 'Message not sent.' : 'Message not sent.'));
     });
+    await completed.future.timeout(const Duration(seconds:12),onTimeout:()=>throw Exception('Delivery not confirmed. Refresh chat before retrying.'));
   }
 
   void onMessage(Function(Map<String, dynamic>) callback) {

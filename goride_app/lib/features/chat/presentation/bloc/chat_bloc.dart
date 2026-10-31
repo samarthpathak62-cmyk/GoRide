@@ -63,23 +63,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
-  void _onChatMessageSent(ChatMessageSent event, Emitter<ChatState> emit) {
-    print("CHAT_BLOC: Sending message to ${event.receiverId}: ${event.text}");
-
-    if (state is ChatLoaded) {
-      final optimisticMsg = MessageEntity(
-        id: 'pending_${DateTime.now().millisecondsSinceEpoch}',
-        senderId: socketService.userId ?? '',
-        receiverId: event.receiverId,
-        text: event.text,
-        createdAt: DateTime.now(),
-        isMe: true,
-      );
-      final current = state as ChatLoaded;
-      emit(current.copyWith(messages: [...current.messages, optimisticMsg]));
-    }
-
-    socketService.sendMessage(event.receiverId, event.text);
+  Future<void> _onChatMessageSent(ChatMessageSent event, Emitter<ChatState> emit) async {
+    try { await socketService.sendMessage(event.receiverId,event.text); }
+    catch(e) { emit(ChatError(e.toString())); }
   }
 
   void _onChatMessageReceived(ChatMessageReceived event, Emitter<ChatState> emit) {

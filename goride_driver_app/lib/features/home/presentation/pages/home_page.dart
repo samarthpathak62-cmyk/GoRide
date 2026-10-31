@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> {
     _offerTimer = Timer.periodic(const Duration(seconds:10), (_) { if(mounted && !_isRideRequestShowing) context.read<HomeBloc>().add(PollRideOffersEvent()); });
     context.read<HomeBloc>().add(InitSocketEvent());
     context.read<HomeBloc>().add(CheckActiveRideEvent());
-    
+
     final authState = context.read<AuthBloc>().state;
     if (authState.userId.isNotEmpty) {
       context.read<WalletBloc>().add(FetchWalletData(authState.userId));
@@ -106,7 +106,7 @@ class _HomePageState extends State<HomePage> {
           listener: (context, state) {
             if (state is HomeRideAccepted) {
               if (_isRideRequestShowing) {
-                Navigator.pop(context); 
+                Navigator.pop(context);
                 _isRideRequestShowing = false;
               }
               Navigator.push(
@@ -118,7 +118,7 @@ class _HomePageState extends State<HomePage> {
             }
             if (state is HomeRideCancelled) {
               if (_isRideRequestShowing) {
-                Navigator.pop(context); 
+                Navigator.pop(context);
                 _isRideRequestShowing = false;
               }
               ScaffoldMessenger.of(context).showSnackBar(
@@ -159,10 +159,11 @@ class _HomePageState extends State<HomePage> {
                   ),
                   children: [
                     TileLayer(
-                      urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                      subdomains: const ['a', 'b', 'c', 'd'],
-                      userAgentPackageName: 'com.goride.driver.goride_driver_app',
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+
+                      userAgentPackageName: 'com.goride.driver.app',
                     ),
+                      const SafeArea(child: SimpleAttributionWidget(alignment: Alignment.topRight,source: Text('OpenStreetMap contributors'))),
                     MarkerLayer(
                       markers: [
                         Marker(
@@ -235,7 +236,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         const SizedBox(height: 25),
-                        
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -272,17 +273,17 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 30),
-                        
+
                         Row(
                           children: [
                             Expanded(child: _buildEarningItem("Today's Earnings", "Rs. ${balance.toStringAsFixed(0)}", Icons.payments_rounded)),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 25),
-                        
+
                         SizedBox(
                           width: double.infinity,
                           height: 65,
@@ -297,7 +298,7 @@ class _HomePageState extends State<HomePage> {
                               side: isOnline ? const BorderSide(color: Colors.redAccent, width: 1) : null,
                               elevation: 0,
                             ),
-                            child: isLoading 
+                            child: isLoading
                               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                               : Text(
                               isOnline ? "STOP WORKING" : "GO ONLINE",
@@ -492,7 +493,7 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 25),
                     const Divider(color: Colors.white10),
                     const SizedBox(height: 25),
-                    
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -529,12 +530,12 @@ class _HomePageState extends State<HomePage> {
                             builder: (context, state) {
                               final isAccepting = state is HomeLoading;
                               final isWaiting = state is HomeWaitingForConfirmation;
-                              
+
                               return _buildActionBtn(
-                                isAccepting ? "ACCEPTING..." : (isWaiting ? "WAITING..." : "ACCEPT"), 
-                                const Color(0xff76eb07), 
-                                Colors.black, 
-                                false, 
+                                isAccepting ? "ACCEPTING..." : (isWaiting ? "WAITING..." : "ACCEPT"),
+                                const Color(0xff76eb07),
+                                Colors.black,
+                                false,
                                 (isAccepting || isWaiting) ? () {} : () {
                                   final rId = rideData['rideId'] ?? rideData['id'] ?? rideData['_id'] ?? "";
                                   context.read<HomeBloc>().add(AcceptRideEvent(rideId: rId.toString()));

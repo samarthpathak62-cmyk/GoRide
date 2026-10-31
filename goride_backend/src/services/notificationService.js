@@ -18,6 +18,8 @@ class NotificationService {
 
       const message = {
         notification,
+        android: {priority:'high',ttl:30000,notification:{channelId:'incoming_trips_v2',sound:'incoming_trip',tag:data.rideId||data.type||'goride'}},
+        apns: {payload:{aps:{sound:'default'}}},
         data: {
           ...data,
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
@@ -57,6 +59,8 @@ class NotificationService {
 
       const message = {
         notification,
+        android: {priority:'high',ttl:30000,notification:{channelId:'incoming_trips_v2',sound:'incoming_trip',tag:data.rideId||data.type||'goride'}},
+        apns: {payload:{aps:{sound:'default'}}},
         data: {
           ...data,
           click_action: 'FLUTTER_NOTIFICATION_CLICK',

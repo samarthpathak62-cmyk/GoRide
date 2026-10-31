@@ -398,6 +398,7 @@ exports.getActiveRide = async (req, res) => {
 
 exports.getRideHistory = async (req, res) => {
   try {
+    await require('../services/dispatchService').expire(req.user.id);
     const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ status: 'error', message: 'Missing userId' });

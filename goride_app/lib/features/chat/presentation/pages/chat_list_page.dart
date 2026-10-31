@@ -81,7 +81,7 @@ class _ChatListPageState extends State<ChatListPage> {
   Widget _buildChatTile(BuildContext context, Map<String, dynamic> conversation) {
     final String name = conversation['other_user_name'] ?? 'Unknown User';
     final String lastMessage = conversation['last_message'] ?? 'No messages';
-    final DateTime lastTime = DateTime.parse(conversation['last_message_time']);
+    final DateTime lastTime = (DateTime.tryParse(conversation['last_message_time']?.toString() ?? '')?.toLocal() ?? DateTime.now());
     final String otherUserId = conversation['other_user_id'];
     
     final String vehicle = conversation['vehicle_info'] ?? 'Past Conversation';
@@ -144,7 +144,7 @@ class _ChatListPageState extends State<ChatListPage> {
                         )
                       : null,
                 ),
-                if (conversation['unread_count'] > 0)
+                if (((conversation['unread_count'] as num?) ?? 0) > 0)
                   Positioned(
                     right: 0,
                     bottom: 0,
@@ -186,7 +186,7 @@ class _ChatListPageState extends State<ChatListPage> {
                           ),
                         ),
                         child: Text(
-                          isActive ? "ACTIVE" : "COMPLETED",
+                          isActive ? "ACTIVE" : "CLOSED",
                           style: GoogleFonts.poppins(
                             color: isActive ? const Color(0xff76eb07) : Colors.white38,
                             fontSize: 9,

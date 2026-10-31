@@ -156,6 +156,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> with TickerProv
                   return tileWidget;
                 },
               ),
+                      const SafeArea(child: SimpleAttributionWidget(alignment: Alignment.topRight,source: Text('OpenStreetMap contributors'))),
               if (_permissionGranted)
                 CurrentLocationLayer(
                   alignPositionOnUpdate: AlignOnUpdate.once,

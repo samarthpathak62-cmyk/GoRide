@@ -1,3 +1,5 @@
+import '../../../../core/services/api_service.dart';
+import '../../../../injection_container.dart' as di;
 import '../../../../core/widgets/ecosystem_tools.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -259,6 +261,13 @@ class _BookingsPageState extends State<BookingsPage> {
             ],
           ),
           TripTools(rideId: booking.id),
+          if (isActive && booking.status != 'started')
+            TextButton.icon(icon: const Icon(Icons.cancel_outlined), label: const Text('Cancel ride'), onPressed: () async {
+              final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Cancel this ride?'),content:const Text('This ends your request so you can book again.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Keep ride')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Cancel ride'))]));
+              if(ok!=true)return;
+              try {await di.sl<ApiService>().post('/rides/cancel',{'rideId':booking.id});if(context.mounted)context.read<BookingsBloc>().add(FetchBookingsEvent());}
+              catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
+            }),
           if (isActive && booking.driver != null) ...[
             const SizedBox(height: 20),
             SizedBox(

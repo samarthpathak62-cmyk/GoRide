@@ -1,3 +1,5 @@
+import 'dart:async';
+import '../../../../core/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:goride_driver_app/features/call/presentation/pages/call_page.dart';
@@ -27,6 +29,15 @@ class ChatDetailPage extends StatefulWidget {
 }
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
+  Timer? _accessTimer;
+  bool _serverCanSend=false;
+  bool _checkingAccess=false;
+  Future<void> _refreshAccess() async {
+    if(_checkingAccess)return;_checkingAccess=true;
+    try {final result=await sl<ApiService>().get('/chat/access/${widget.userId}');if(mounted)setState(()=>_serverCanSend=result['canSend']==true);}
+    catch(_){if(mounted)setState(()=>_serverCanSend=false);}
+    finally{_checkingAccess=false;}
+  }
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _canPop = false;
@@ -34,6 +45,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   void initState() {
     super.initState();
+    _refreshAccess();
+    _accessTimer=Timer.periodic(const Duration(seconds:8),(_)=>_refreshAccess());
     print("CHAT_DETAIL (DRIVER): Initializing with target userId: ${widget.userId}");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChatBloc>().add(ChatHistoryFetched(widget.userId));
@@ -42,6 +55,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   void dispose() {
+    _accessTimer?.cancel();
     _focusNode.dispose();
     _messageController.dispose();
     super.dispose();
@@ -76,12 +90,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       },
       child: Scaffold(
         backgroundColor: const Color(0xff0a0a0a),
-        appBar: _buildAppBar(context, true),
+        appBar: _buildAppBar(context, _serverCanSend),
         body: Column(
           children: [
             _buildTripBanner(),
             _buildMessageList(),
-            if (!_isPopping) _buildInputSection(),
+            if (!_isPopping && _serverCanSend) _buildInputSection(),
+            if (!_serverCanSend) const Padding(padding: EdgeInsets.all(16),child: Text('Chat closed or unavailable. Messaging and calls require an active shared trip.',style:TextStyle(color:Colors.white60))),
           ],
         ),
       ),
@@ -125,7 +140,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
               ),
               Text(
-                "Online",
+                _serverCanSend ? "Active trip chat" : "Chat closed",
                 style: GoogleFonts.outfit(color: const Color(0xff76eb07), fontSize: 11, fontWeight: FontWeight.w600),
               ),
             ],
@@ -179,6 +194,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return Expanded(
       child: BlocBuilder<ChatBloc, ChatState>(
         builder: (context, state) {
+          if (state is ChatError) return Center(child: Padding(padding: const EdgeInsets.all(20),child: Text(state.message,style: const TextStyle(color: Colors.orangeAccent))));
           if (state is ChatLoaded) {
             if (state.messages.isEmpty) {
               return Center(

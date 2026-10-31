@@ -11,7 +11,16 @@ class RideService {
     if(!['cash','wallet'].includes(method))throw new AppError('Choose cash or wallet.',400);
     await require('./dispatchService').expire(rideData.userId);
     const {data,error}=await getServiceClient().rpc('book_quoted_ride',{p_actor:rideData.userId,p_quote:rideData.quoteId,p_method:method});
-    if(error)throw new AppError(error.code==='42501'?'This quote does not belong to your account.':'Quote expired, a trip is already active, or wallet funds are insufficient. Refresh the fare or choose cash.',error.code==='42501'?403:409);
+    if(error){
+      const detail=String(error.message||'');
+      let message='Booking could not be created. Please refresh and retry.';
+      if(error.code==='42501')message='This fare quote is unavailable for your account. Refresh the fare.';
+      else if(/active trip/i.test(detail))message='You already have an active trip. Open My Bookings to resume or cancel it.';
+      else if(/insufficient wallet/i.test(detail))message='Wallet balance is too low. Choose cash or add funds through checkout.';
+      else if(/quote expired/i.test(detail))message='Your fare quote expired. Refresh the fare and confirm again.';
+      else if(!['P0001','42501'].includes(error.code))throw new AppError('Booking service is unavailable. Please try again shortly.',503);
+      throw new AppError(message,error.code==='42501'?403:409);
+    }
     return data;
   }
 

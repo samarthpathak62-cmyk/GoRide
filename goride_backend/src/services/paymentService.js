@@ -18,8 +18,9 @@ class PaymentService {
   constructor({ db, env = process.env, fetchImpl = fetch } = {}) {
     this.db = db; this.env = env; this.fetch = fetchImpl;
   }
+  get mode() { return this.env.PAYMENT_MODE || 'live'; }
   requireConfig() {
-    if (this.env.PAYMENTS_ENABLED !== 'true' || !this.db || !this.env.RAZORPAY_KEY_ID || !this.env.RAZORPAY_KEY_SECRET || !this.env.RAZORPAY_WEBHOOK_SECRET || !this.env.RAZORPAY_KEY_ID.startsWith('rzp_live_')) {
+    if (this.env.PAYMENTS_ENABLED !== 'true' || !this.db || !this.env.RAZORPAY_KEY_ID || !this.env.RAZORPAY_KEY_SECRET || !this.env.RAZORPAY_WEBHOOK_SECRET || !['live','test'].includes(this.mode) || !this.env.RAZORPAY_KEY_ID.startsWith(this.mode==='test'?'rzp_test_':'rzp_live_')) {
       throw new AppError('Online payments are not configured yet. No money has been added.', 503);
     }
   }
@@ -40,11 +41,11 @@ class PaymentService {
     this.requireConfig();
     const paise = amountToPaise(amount);
     const { data: order, error } = await this.db.from('payment_orders')
-      .insert({ user_id: userId, amount_paise: paise }).select().single();
+      .insert({ user_id: userId, amount_paise: paise, mode: this.mode }).select().single();
     if (error) throw new AppError('Could not create payment order', 500);
     const link = await this.gateway('payment_links', 'POST', {
       amount: paise, currency: 'INR', accept_partial: false, reference_id: order.id,
-      description: 'GoRide wallet top-up', expire_by: Math.floor(Date.now() / 1000) + 1800,
+      description: this.mode==='test'?'GoRide TEST payment — no real wallet credit':'GoRide wallet top-up', expire_by: Math.floor(Date.now() / 1000) + 1800,
     });
     const url = new URL(link.short_url);
     if (url.protocol !== 'https:' || !['rzp.io', 'rzp.pay', 'razorpay.com'].some(host => url.hostname === host || url.hostname.endsWith(`.${host}`))) {
@@ -52,7 +53,7 @@ class PaymentService {
     }
     const { error: saveError } = await this.db.from('payment_orders').update({ gateway_link_id: link.id }).eq('id', order.id);
     if (saveError) throw new AppError('Could not save payment order', 500);
-    return { checkoutUrl: url.toString(), orderId: order.id };
+    return { checkoutUrl: url.toString(), orderId: order.id, mode:this.mode, notice:this.mode==='test'?'TEST ONLY. No real money or spendable wallet credit.':'Wallet credits only after verified payment.' };
   }
   async webhook(raw, signature) {
     this.requireConfig();
@@ -66,16 +67,17 @@ class PaymentService {
     if (!/^plink_[a-zA-Z0-9]+$/.test(linkId || '') || !/^pay_[a-zA-Z0-9]+$/.test(paymentId || '')) throw new AppError('Invalid payment event', 400);
     const { data: order, error } = await this.db.from('payment_orders').select('*').eq('gateway_link_id', linkId).single();
     if (error || !order) throw new AppError('Payment order not available; retry webhook', 503);
+    if((order.mode||'live')!==this.mode)throw new AppError('Payment mode does not match order',400);
     // A signed event alone is not sufficient: confirm captured funds with the provider.
     const link = await this.gateway(`payment_links/${linkId}`);
     const payment = await this.gateway(`payments/${paymentId}`);
-    if (link.status !== 'paid' || link.reference_id !== order.id || link.currency !== 'INR' ||
+    if ((this.mode==='test' && payment.live!==false) || (this.mode==='live' && payment.live===false) || link.status !== 'paid' || link.reference_id !== order.id || link.currency !== 'INR' ||
         link.amount !== Number(order.amount_paise) || link.amount_paid !== Number(order.amount_paise) ||
         !link.payments?.some(p => p.payment_id === paymentId) ||
         payment.status !== 'captured' || payment.currency !== 'INR' || payment.amount !== Number(order.amount_paise)) {
       throw new AppError('Payment does not match wallet order', 400);
     }
-    const { error: creditError } = await this.db.rpc('credit_verified_payment', { p_link_id: linkId, p_payment_id: paymentId });
+    const { error: creditError } = await this.db.rpc(this.mode==='test'?'credit_verified_test_payment':'credit_verified_payment', { p_link_id: linkId, p_payment_id: paymentId });
     if (creditError) throw new AppError('Wallet credit failed; retry webhook', 503);
   }
 }

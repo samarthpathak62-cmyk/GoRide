@@ -1,3 +1,6 @@
+import '../../../../injection_container.dart' as di;
+import 'dart:async';
+import '../../../../core/services/api_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -34,12 +37,23 @@ class ChatDetailPage extends StatefulWidget {
 }
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
+  Timer? _accessTimer;
+  bool _serverCanSend=false;
+  bool _checkingAccess=false;
+  Future<void> _refreshAccess() async {
+    if(_checkingAccess)return;_checkingAccess=true;
+    try {final result=await di.sl<ApiService>().get('/chat/access/${widget.receiverId}');if(mounted)setState(()=>_serverCanSend=result['canSend']==true);}
+    catch(_){if(mounted)setState(()=>_serverCanSend=false);}
+    finally{_checkingAccess=false;}
+  }
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
+    _refreshAccess();
+    _accessTimer=Timer.periodic(const Duration(seconds:8),(_)=>_refreshAccess());
     print("CHAT_DETAIL: Initializing with receiverId: ${widget.receiverId}");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChatBloc>().add(ChatHistoryFetched(widget.receiverId));
@@ -48,6 +62,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   void dispose() {
+    _accessTimer?.cancel();
     _focusNode.dispose();
     _messageController.dispose();
     super.dispose();
@@ -57,9 +72,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   void _handlePop() async {
     if (_isPopping) return;
-    
+
     setState(() {
-      _isPopping = true; 
+      _isPopping = true;
     });
     FocusScope.of(context).unfocus();
     _focusNode.unfocus();
@@ -126,7 +141,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           ],
         ),
         actions: [
-          if (!widget.isReadOnly)
+          if (!widget.isReadOnly && _serverCanSend)
             IconButton(
               onPressed: () {
                 context.read<CallBloc>().add(StartCallEvent(widget.receiverId, name: widget.userName));
@@ -158,6 +173,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             Expanded(
               child: BlocBuilder<ChatBloc, ChatState>(
                 builder: (context, state) {
+                  if (state is ChatError) return Center(child: Padding(padding: const EdgeInsets.all(20),child: Text(state.message,style: const TextStyle(color: Colors.orangeAccent))));
                   if (state is ChatLoaded) {
                     return ListView.builder(
                       reverse: true,
@@ -177,13 +193,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 },
               ),
             ),
-            if (widget.isReadOnly || _isPopping)
+            if (widget.isReadOnly || !_serverCanSend || _isPopping)
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 color: Colors.white.withValues(alpha: 0.05),
                 child: Center(
                   child: Text(
-                    widget.isReadOnly 
+                    (widget.isReadOnly || !_serverCanSend)
                       ? "This is a past conversation (Read Only)"
                       : "",
                     style: GoogleFonts.poppins(color: Colors.white38, fontSize: 12),

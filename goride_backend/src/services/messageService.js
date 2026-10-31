@@ -44,7 +44,18 @@ class MessageService {
       console.error('Error fetching conversations:', error);
       throw new AppError(error.message, 400);
     }
-    return data;
+    const result=[];
+    for(const row of (data||[]).slice(0,50)) {
+      const other=row.other_user_id;
+      try { await require('./rideAccess').peers(userId,other,{allowHistory:true}); }
+      catch(e) { if(e.statusCode===403)continue;throw e; }
+      let active=true;
+      try { await require('./rideAccess').peers(userId,other); }
+      catch(e) { if(e.statusCode!==403)throw e;active=false; }
+      result.push({...row,other_user_name:row.other_user_name?.trim()||'GoRide participant',
+        profile_pic:row.other_user_pic||row.profile_pic||null,unread_count:0,is_active:active});
+    }
+    return result;
   }
 }
 

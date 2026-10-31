@@ -99,7 +99,7 @@ class _RideTrackingViewState extends State<RideTrackingView> {
               ),
             );
           }
-          
+
           if (state.isCompleted) {
             Navigator.of(context).popUntil((route) => route.isFirst || route.settings.name == 'RideTrackingPage');
             _showCompletionDialog(context, state.fare);
@@ -130,10 +130,11 @@ class _RideTrackingViewState extends State<RideTrackingView> {
                   children: [
                     TileLayer(
                       urlTemplate:
-                          'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                      subdomains: const ['a', 'b', 'c', 'd'],
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+
                       userAgentPackageName: 'com.example.goride_app',
                     ),
+                      const SafeArea(child: SimpleAttributionWidget(alignment: Alignment.topRight,source: Text('OpenStreetMap contributors'))),
                     PolylineLayer(
                       polylines: [
                         Polyline(
@@ -374,7 +375,7 @@ class _RideTrackingViewState extends State<RideTrackingView> {
                                   final authState = context.read<AuthBloc>().state;
                                   final userName = authState.currentUser?.fullName;
                                   context.read<CallBloc>().add(StartCallEvent(
-                                    widget.driver.id.toString(), 
+                                    widget.driver.id.toString(),
                                     name: userName,
                                   ));
                                   Navigator.push(

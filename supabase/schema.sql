@@ -25,3 +25,6 @@
 \i migrations/202610310011_disable_legacy_payout.sql
 \i migrations/202610310012_profile_photos.sql
 \i migrations/202610310013_booking_operations.sql
+
+\i migrations/202610310014_search_and_chat_repair.sql
+\i migrations/202610310015_payment_sandbox.sql

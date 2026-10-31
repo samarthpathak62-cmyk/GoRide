@@ -14,7 +14,7 @@ router.get('/payments/status', (_req,res)=>{
  const env=process.env;
  let checkoutReady=true;
  try {require('../config/payments').requireConfig();} catch (_) {checkoutReady=false;}
- res.json({checkoutReady,provider:'Razorpay hosted checkout',currency:'INR',
+ res.json({checkoutReady,mode:require('../config/payments').mode,provider:'Razorpay hosted checkout',currency:'INR',
   checks:{serverServiceKey:!!env.SUPABASE_SERVICE_ROLE_KEY,liveGatewayKey:!!env.RAZORPAY_KEY_ID?.startsWith('rzp_live_'),gatewaySecret:!!env.RAZORPAY_KEY_SECRET,webhookSecret:!!env.RAZORPAY_WEBHOOK_SECRET,explicitlyEnabled:env.PAYMENTS_ENABLED==='true'},
   methods:['UPI','Debit / credit cards','Netbanking'],bankPayoutsReady:false,cashRideImplemented:true,cashRideReady:false,
   notice:'Configuration checks are not a successful transaction or merchant-approval check. Provider eligibility, KYC, webhook delivery and real-money testing remain required. Do not enable until the security review is complete.'});

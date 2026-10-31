@@ -7,6 +7,7 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/conversations', chatController.getConversations);
+router.get('/access/:otherUserId', chatController.access);
 router.get('/history/:otherUserId', chatController.getChatHistory);
 
 module.exports = router;

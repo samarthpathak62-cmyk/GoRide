@@ -1,3 +1,5 @@
+import '../../../../core/services/notification_service.dart';
+import '../../../../injection_container.dart' as di;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:goride_driver_app/features/auth/presentation/bloc/auth_state.dart';
 import 'package:goride_driver_app/features/home/presentation/bloc/home_event.dart';
@@ -54,6 +56,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     });
     on<NewRideRequestReceivedEvent>((event, emit) {
       print("HOME_BLOC: New ride request received event in Bloc");
+      di.sl<NotificationService>().showRideOffer(event.rideData);
       emit(HomeNewRideRequest(
         rideData: event.rideData,
         isOnline: state.isOnline,

@@ -41,7 +41,7 @@ class _WalletPageState extends State<WalletPage> with WidgetsBindingObserver {
       if (!mounted) return;
       setState(() {
         _checkoutAvailable = data['onlineCheckoutAvailable'] == true;
-        _paymentNotice = _checkoutAvailable
+        _paymentNotice = data['mode']=='test' ? 'TEST MODE · Sandbox INR ${data['sandboxBalance'] ?? 0}. No real money; not spendable or withdrawable. ${data['onlineCheckoutAvailable']==true ? "Use only provider test payment details." : "Test gateway keys are not configured."}' : _checkoutAvailable
           ? 'Secure checkout: available payment methods are shown by the provider.'
           : 'Online payments await merchant setup. No fake top-ups. Bank payouts are not enabled.';
       });

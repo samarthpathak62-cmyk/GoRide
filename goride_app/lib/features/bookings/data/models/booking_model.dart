@@ -41,7 +41,7 @@ class BookingModel {
       status: json['status'] ?? 'pending',
       fare: (json['fare'] as num?)?.toDouble() ?? 0.0,
       category: json['category'] ?? 'Ride',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()).toLocal(),
       driver: json['driver'] != null ? DriverModel.fromJson(json['driver']) : null,
     );
   }
