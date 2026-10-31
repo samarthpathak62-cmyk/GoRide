@@ -33,6 +33,7 @@ class SocketService {
     _socket = io(baseUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
+      'forceNew': true,
       'auth': {'token': token},
     });
 

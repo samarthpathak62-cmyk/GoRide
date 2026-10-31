@@ -19,6 +19,8 @@ test.before(async()=>{
  await db.exec(tables);
  await db.exec(`alter table public.rides add category text;alter table public.drivers add operationally_enabled boolean default false;`);
  await db.exec(fs.readFileSync(path.join(root,'functions/complete_ride_transaction.sql'),'utf8'));
+ await db.exec(fs.readFileSync(path.join(root,'functions/get_user_conversations.sql'),'utf8'));
+ await db.exec(fs.readFileSync(path.join(root,'functions/get_nearby_drivers.sql'),'utf8'));
  await db.exec(fs.readFileSync(path.join(root,'migrations/202610310006_secure_ride_lifecycle.sql'),'utf8'));
  await db.exec(fs.readFileSync(path.join(root,'migrations/202610310007_ride_access_cutover.sql'),'utf8'));
  await db.exec(`insert into auth.users values('${RIDER}'),('${CAPTAIN}'),('${OTHER}');insert into profiles(id,wallet_balance) values('${RIDER}',1000),('${CAPTAIN}',0),('${OTHER}',1000);
@@ -53,7 +55,7 @@ test('completion settles once; retry is idempotent and produces exactly two ledg
 });
 test('anonymous/authenticated roles cannot call mutation RPCs, old settlement or write rides',async()=>{
  for(const role of ['anon','authenticated']){
-  for(const fn of ['complete_ride_transaction(uuid)','ride_action_secure(uuid,uuid,text)','request_ride_secure(uuid,jsonb)'])assert.equal((await db.query('select has_function_privilege($1,$2,\'execute\') as allowed',[role,fn])).rows[0].allowed,false);
+  for(const fn of ['complete_ride_transaction(uuid)','ride_action_secure(uuid,uuid,text)','request_ride_secure(uuid,jsonb)','get_user_conversations(uuid)','get_nearby_drivers(float8,float8,float8)'])assert.equal((await db.query('select has_function_privilege($1,$2,\'execute\') as allowed',[role,fn])).rows[0].allowed,false);
   assert.equal((await db.query("select has_table_privilege($1,'rides','update') as allowed",[role])).rows[0].allowed,false);
  }
 });
