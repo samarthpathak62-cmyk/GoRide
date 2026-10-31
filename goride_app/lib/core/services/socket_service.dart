@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart';
 
 class SocketService {
@@ -6,6 +8,8 @@ class SocketService {
   SocketService._internal();
 
   Socket? _socket;
+  Future<void>? _connecting;
+  final Set<String> _rideRooms = {};
   String? _userId;
 
   String? get userId => _userId;
@@ -13,16 +17,28 @@ class SocketService {
   
   final Map<String, List<Function(dynamic)>> _listeners = {};
 
-  void connect(String url) {
+  Future<void> connect(String url) {
+    return _connecting ??= _connect(url).whenComplete(() => _connecting = null);
+  }
+  Future<void> _connect(String url) async {
     if (_socket != null && _socket!.connected) return;
 
     print(" Connecting to Socket.io: $url");
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('auth_token');
+    if (token == null) {
+      try { token = (jsonDecode(prefs.getString('CACHED_USER') ?? '{}') as Map)['token'] as String?; } catch (_) {}
+    }
+    if (token == null || token.isEmpty) return;
+    _socket?.dispose();
     _socket = io(url, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
+      'auth': {'token': token},
     });
 
     _socket!.onConnect((_) {
+      for (final id in _rideRooms) { _socket!.emit('join_ride', id); }
       print(' Connected to Socket.io: ${_socket!.id}');
       _listeners.forEach((event, callbacks) {
         _socket!.off(event); 
@@ -54,11 +70,12 @@ class SocketService {
 
 
   void joinRide(String rideId) {
+    if (rideId.isNotEmpty) _rideRooms.add(rideId);
     print("Joining ride room: $rideId");
     _socket?.emit('join_ride', rideId);
   }
 
-  void emit(String event, dynamic data) {
+  Future<void> emit(String event, dynamic data) async {
     if (_socket == null) return;
     
     if (_socket!.connected) {
@@ -223,8 +240,10 @@ class SocketService {
   }
 
   void disconnect() {
-    _socket?.disconnect();
+    _socket?.dispose();
     _socket = null;
+    _userId = null;
+    _rideRooms.clear();
     _listeners.clear();
   }
 }

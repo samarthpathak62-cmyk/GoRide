@@ -63,7 +63,7 @@ app.use('/api', rideRoutes);
 
 
 app.get('/health', (req, res) => res.json({ status: 'ok', message: 'GoRide Backend is healthy!',
-  apiVersion: 2, build: (process.env.RENDER_GIT_COMMIT || '').slice(0,12) || 'unknown' }));
+  apiVersion: 3, build: (process.env.RENDER_GIT_COMMIT || '').slice(0,12) || 'unknown' }));
 app.get('/', (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.set('Referrer-Policy', 'no-referrer');

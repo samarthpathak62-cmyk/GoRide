@@ -5,6 +5,7 @@ exports.getChatHistory = async (req, res, next) => {
     const { otherUserId } = req.params;
     const userId = req.user.id;
     
+    await require('../services/rideAccess').peers(userId,otherUserId);
     const history = await messageService.getChatHistory(userId, otherUserId);
     
     res.status(200).json({

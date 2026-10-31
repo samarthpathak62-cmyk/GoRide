@@ -19,6 +19,8 @@ router.get('/payments/status', (_req,res)=>{
   methods:['UPI','Debit / credit cards','Netbanking'],bankPayoutsReady:false,cashRideReady:false,
   notice:'Configuration checks are not a successful transaction or merchant-approval check. Provider eligibility, KYC, webhook delivery and real-money testing remain required. Do not enable until the security review is complete.'});
 });
+router.get('/operations/rides',require('../controllers/operationsController').rides);
+router.get('/operations/rides/:rideId/events',require('../controllers/operationsController').events);
 router.get('/accounts',accounts.list);
 router.post('/accounts',accounts.create);
 router.get('/applications',admin.list);

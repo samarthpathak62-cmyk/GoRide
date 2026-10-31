@@ -141,7 +141,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> with TickerProv
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: const LatLng(24.8607, 67.0011),
+              initialCenter: const LatLng(28.6139, 77.2090),
               initialZoom: 15,
               onTap: (tapPosition, point) {
                 setState(() => _selectedLocation = point);

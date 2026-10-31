@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart';
 
 class SocketService {
   Socket? _socket;
+  Future<void>? _connecting;
+  final Set<String> _rideRooms = {};
   String? _lastDriverId;
   String? _userId;
   final String baseUrl;
@@ -12,16 +16,28 @@ class SocketService {
 
   SocketService({required this.baseUrl});
 
-  void connect() {
+  Future<void> connect() {
+    return _connecting ??= _connect().whenComplete(() => _connecting = null);
+  }
+  Future<void> _connect() async {
     if (_socket != null && _socket!.connected) return;
 
     print("SOCKET_SERVICE: Connecting to: $baseUrl");
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('auth_token');
+    if (token == null) {
+      try { token = (jsonDecode(prefs.getString('CACHED_USER') ?? '{}') as Map)['token'] as String?; } catch (_) {}
+    }
+    if (token == null || token.isEmpty) return;
+    _socket?.dispose();
     _socket = io(baseUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
+      'auth': {'token': token},
     });
 
     _socket!.onConnect((_) {
+      for (final id in _rideRooms) { _socket!.emit('join_ride', id); }
       print('SOCKET_SERVICE: Connected with ID: ${_socket!.id}');
 
       _callbacks.forEach((event, _) {
@@ -79,11 +95,12 @@ class SocketService {
     _callbacks[event]!.add(callback);
   }
 
-  void emit(String event, dynamic data) {
+  Future<void> emit(String event, dynamic data) async {
     if (_socket == null) {
-      connect();
+      await connect();
     }
     
+    if (_socket == null) return;
     if (_socket!.connected) {
       _socket!.emit(event, data);
     } else {
@@ -98,6 +115,7 @@ class SocketService {
   }
 
   void joinRide(String rideId) {
+    if (rideId.isNotEmpty) _rideRooms.add(rideId);
     if (rideId.isEmpty) {
       print("SOCKET_SERVICE: Warning! joinRide called with empty rideId");
       return;
@@ -278,8 +296,11 @@ class SocketService {
   }
 
   void disconnect() {
-    _socket?.disconnect();
+    _socket?.dispose();
     _socket = null;
+    _userId = null;
+    _rideRooms.clear();
+    _lastDriverId = null;
     _callbacks.clear();
   }
 

@@ -1,5 +1,6 @@
 const rideService = require('../services/rideService');
-const { supabase } = require('../config/supabase');
+const { getServiceClient }=require('../config/serviceClient');
+const {RIDE_SELECT}=require('../services/ridePolicy');
 const notificationService = require('../services/notificationService');
 
 exports.getExploreData = async (req, res) => {
@@ -7,7 +8,7 @@ exports.getExploreData = async (req, res) => {
     const userId = req.user.id;
     const { lat, lng } = req.query;
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await getServiceClient()
       .from('profiles')
       .select('full_name')
       .eq('id', userId)
@@ -24,7 +25,7 @@ exports.getExploreData = async (req, res) => {
 
     const data = {
       user: {
-        name: profile ? profile.full_name.split(' ')[0] : 'User',
+        name: profile?.full_name ? profile.full_name.split(' ')[0] : 'User',
         greeting: 'Where are you going?'
       },
       categories: [
@@ -33,15 +34,11 @@ exports.getExploreData = async (req, res) => {
         {id:3,name:'Car',icon:'directions_car',color:'0xff76eb07'}
       ],
       nearbyDrivers: nearbyDrivers,
-      activePromo: {
-        title: '50% OFF',
-        subtitle: 'On your first 3 rides',
-        code: 'GORIDE50'
-      }
+      activePromo: null
     };
     res.status(200).json({ status: 'success', data });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
@@ -50,9 +47,9 @@ exports.requestRide = async (req, res) => {
     const ride = await rideService.requestRide({ ...req.body, userId: req.user.id });
     const nearbyDrivers = await rideService.getNearbyDrivers(req.body.pickupLatitude, req.body.pickupLongitude, req.body.category);
 
-    const { data: passengerProfile } = await supabase
+    const { data: passengerProfile } = await getServiceClient()
       .from('profiles')
-      .select('*')
+      .select('full_name,profile_pic')
       .eq('id', ride.user_id)
       .single();
 
@@ -80,7 +77,7 @@ exports.requestRide = async (req, res) => {
         driverUserIds,
         {
           title: 'New Ride Request',
-          body: `New ride from ${ride.pickup_location} for PKR ${ride.fare}`
+          body: `New ride from ${ride.pickup_location} for INR ${ride.fare}`
         },
         { rideId: ride.id.toString(), type: 'ride_request' }
       );
@@ -94,7 +91,7 @@ exports.requestRide = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
@@ -113,7 +110,7 @@ exports.acceptRide = async (req, res) => {
       throw new Error("Driver not found for this user.");
     }
 
-    const { data: driverProfile } = await supabase
+    const { data: driverProfile } = await getServiceClient()
       .from('profiles')
       .select('profile_pic')
       .eq('id', driverId)
@@ -121,11 +118,11 @@ exports.acceptRide = async (req, res) => {
       
     const driverProfilePic = driverProfile ? driverProfile.profile_pic : driverData.profile_pic;
 
-    const ride = await rideService.acceptRide(rideId, driverData.id);
+    const ride = await rideService.acceptRide(rideId, req.user.id);
 
-    const { data: passengerProfile } = await supabase
+    const { data: passengerProfile } = await getServiceClient()
       .from('profiles')
-      .select('*')
+      .select('full_name,profile_pic')
       .eq('id', ride.user_id)
       .single();
 
@@ -148,16 +145,15 @@ exports.acceptRide = async (req, res) => {
           id: driverData.user_id,
           name: driverData.full_name,
           vehicle: driverData.vehicle_type,
-          lat: driverData.lat || 31.5204,
-          lng: driverData.lng || 74.3587,
-          rating: 4.8,
+          lat: driverData.lat ?? null,
+          lng: driverData.lng ?? null,
           profile_pic: driverProfilePic
         }
       });
       console.log(`Emitted ride_accepted (Proposed) for room ${rideId}`);
     }
 
-    const { data: rideDataForPush } = await supabase
+    const { data: rideDataForPush } = await getServiceClient()
       .from('rides')
       .select('user_id')
       .eq('id', rideId)
@@ -176,23 +172,23 @@ exports.acceptRide = async (req, res) => {
 
     res.status(200).json({ status: 'success', data: enrichedRide });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
 exports.confirmRide = async (req, res) => {
   try {
     const { rideId } = req.body;
-    const ride = await rideService.confirmRide(rideId);
+    const ride = await rideService.confirmRide(rideId, req.user.id);
 
-    const { data: passengerProfile } = await supabase
+    const { data: passengerProfile } = await getServiceClient()
       .from('profiles')
-      .select('*')
+      .select('full_name,profile_pic')
       .eq('id', ride.user_id)
       .single();
 
     if (ride.driver && ride.driver.user_id) {
-      const { data: driverProfile } = await supabase
+      const { data: driverProfile } = await getServiceClient()
         .from('profiles')
         .select('profile_pic')
         .eq('id', ride.driver.user_id)
@@ -233,14 +229,14 @@ exports.confirmRide = async (req, res) => {
 
     res.status(200).json({ status: 'success', data: enrichedRide });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
 exports.rejectDriver = async (req, res) => {
   try {
     const { rideId } = req.body;
-    const ride = await rideService.rejectDriver(rideId);
+    const ride = await rideService.rejectDriver(rideId, req.user.id);
 
     if (global.io) {
       global.io.to(rideId).emit('driver_rejected', { rideId, message: 'User rejected the driver.' });
@@ -249,14 +245,14 @@ exports.rejectDriver = async (req, res) => {
 
     res.status(200).json({ status: 'success', data: ride });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
 exports.cancelRide = async (req, res) => {
   try {
     const { rideId } = req.body;
-    const ride = await rideService.cancelRide(rideId);
+    const ride = await rideService.cancelRide(rideId, req.user.id);
 
     if (global.io) {
       global.io.to(rideId).emit('ride_cancelled', { rideId, message: 'The ride has been cancelled.' });
@@ -287,21 +283,21 @@ exports.cancelRide = async (req, res) => {
 
     res.status(200).json({ status: 'success', data: ride });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
 exports.notifyArrived = async (req, res) => {
   try {
     const { rideId } = req.body;
-    const ride = await rideService.driverArrived(rideId);
+    const ride = await rideService.driverArrived(rideId, req.user.id);
 
     if (global.io) {
       global.io.to(rideId).emit('driver_arrived', { rideId });
       console.log(`Emitted driver_arrived for room ${rideId}`);
     }
 
-    const { data: rideDataForPush } = await supabase
+    const { data: rideDataForPush } = await getServiceClient()
       .from('rides')
       .select('user_id')
       .eq('id', rideId)
@@ -320,14 +316,14 @@ exports.notifyArrived = async (req, res) => {
 
     res.status(200).json({ status: 'success', data: ride });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
 exports.startRide = async (req, res) => {
   try {
     const { rideId } = req.body;
-    const ride = await rideService.startRide(rideId);
+    const ride = await rideService.startRide(rideId, req.user.id);
 
     if (global.io) {
       global.io.to(rideId).emit('ride_started', { rideId });
@@ -347,14 +343,14 @@ exports.startRide = async (req, res) => {
 
     res.status(200).json({ status: 'success', data: ride });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
 exports.completeRide = async (req, res) => {
   try {
     const { rideId } = req.body;
-    const result = await rideService.completeRide(rideId);
+    const result = await rideService.completeRide(rideId, req.user.id);
 
     if (result.status === 'success' || result.status === 'already_completed') {
       if (global.io) {
@@ -369,7 +365,7 @@ exports.completeRide = async (req, res) => {
         result.ride.user_id,
         {
           title: 'Ride Completed',
-          body: `Your ride has been completed. Final fare: PKR ${result.ride.fare}`
+          body: `Your ride has been completed. Final fare: INR ${result.ride.fare}`
         },
         { 
           rideId: rideId.toString(), 
@@ -384,7 +380,7 @@ exports.completeRide = async (req, res) => {
     }
   } catch (error) {
     console.error("Error in completeRide:", error);
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
@@ -392,13 +388,14 @@ exports.completeRide = async (req, res) => {
 
 exports.getActiveRide = async (req, res) => {
   try {
-    const { userId, driverId } = req.query;
-    let query = supabase.from('rides').select('*, driver:drivers(*)');
+    const userId = req.query.driverId ? null : req.user.id;
+    const driverId = req.query.driverId ? req.user.id : null;
+    let query = getServiceClient().from('rides').select(RIDE_SELECT);
 
     if (userId) {
       query = query.eq('user_id', userId).in('status', ['pending', 'driver_assigned', 'accepted', 'driver_arrived', 'started']);
     } else if (driverId) {
-      const { data: driver } = await supabase.from('drivers').select('id').eq('user_id', driverId).single();
+      const { data: driver } = await getServiceClient().from('drivers').select('id').eq('user_id', driverId).single();
       if (!driver) return res.status(200).json({ status: 'success', data: null });
       query = query.eq('driver_id', driver.id).in('status', ['driver_assigned', 'accepted', 'driver_arrived', 'started']);
     } else {
@@ -411,14 +408,14 @@ exports.getActiveRide = async (req, res) => {
 
     if (data && data.length > 0) {
       const ride = data[0];
-      const { data: passengerProfile } = await supabase
+      const { data: passengerProfile } = await getServiceClient()
         .from('profiles')
-        .select('*')
+        .select('full_name,profile_pic')
         .eq('id', ride.user_id)
         .single();
         
       if (ride.driver && ride.driver.user_id) {
-        const { data: driverProfile } = await supabase
+        const { data: driverProfile } = await getServiceClient()
           .from('profiles')
           .select('profile_pic')
           .eq('id', ride.driver.user_id)
@@ -440,22 +437,25 @@ exports.getActiveRide = async (req, res) => {
     }
   } catch (error) {
     console.error("Error in getActiveRide:", error);
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 
 exports.getRideHistory = async (req, res) => {
   try {
-    const { userId } = req.query;
+    const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ status: 'error', message: 'Missing userId' });
     }
 
-    const { data, error } = await supabase
-      .from('rides')
-      .select('*, driver:drivers(*)')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    let query=getServiceClient().from('rides').select(RIDE_SELECT);
+    if(req.query.driverId){
+      const {data:driver,error:driverError}=await getServiceClient().from('drivers').select('id').eq('user_id',userId).maybeSingle();
+      if(driverError)throw driverError;
+      if(!driver)return res.json({status:'success',data:[]});
+      query=query.eq('driver_id',driver.id);
+    }else query=query.eq('user_id',userId);
+    const {data,error}=await query.order('created_at',{ascending:false}).limit(100);
 
     if (error) throw error;
 
@@ -465,7 +465,7 @@ exports.getRideHistory = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getRideHistory:", error);
-    res.status(500).json({ status: 'error', message: error.message });
+    res.status(error.statusCode||500).json({ status: 'error', message: error.message });
   }
 };
 

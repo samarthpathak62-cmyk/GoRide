@@ -1,4 +1,4 @@
-const { supabase } = require('../config/supabase');
+const { getServiceClient }=require('../config/serviceClient');
 const { getDistance } = require('geolib');
 const fareService = require('./fareService');
 const AppError = require('../utils/AppError');
@@ -23,40 +23,17 @@ class RideService {
 
     const calculatedFare = fareService.calculateFare(distance, category);
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('wallet_balance')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) throw profileError;
-    if (profile.wallet_balance < calculatedFare) {
-      throw new AppError(`Wallet balance INR ${Number(profile.wallet_balance).toFixed(2)} is below this ride fare INR ${calculatedFare.toFixed(2)}. Please add the difference after online payments are enabled.`, 400);
-    }
-
-    const { data, error } = await supabase
-      .from('rides')
-      .insert([{
-        user_id: userId,
-        pickup_location: pickupLocation,
-        drop_location: dropLocation,
-        category,
-        fare: calculatedFare,
-        pickup_latitude: pickupLatitude,
-        pickup_longitude: pickupLongitude,
-        drop_latitude: dropLatitude,
-        drop_longitude: dropLongitude,
-        pickup_coords: `POINT(${pickupLongitude} ${pickupLatitude})`,
-        drop_coords: `POINT(${dropLongitude} ${dropLatitude})`
-      }])
-      .select();
-
-    if (error) throw error;
-    return data[0];
+    if (![pickupLocation,dropLocation].every(v=>typeof v==='string'&&v.trim().length>=2&&v.length<=500)) throw new AppError('Choose pickup and destination addresses.',400);
+    if (distance<100) throw new AppError('Pickup and destination must be at least 100 metres apart.',400);
+    const {data,error}=await require('../config/serviceClient').getServiceClient().rpc('request_ride_secure',{
+      p_actor:userId,p_payload:{pickupLocation,dropLocation,category,fare:calculatedFare,pickupLatitude,pickupLongitude,dropLatitude,dropLongitude,
+      pickupCoords:`POINT(${pickupLongitude} ${pickupLatitude})`,dropCoords:`POINT(${dropLongitude} ${dropLatitude})`}});
+    if(error) throw new AppError(error.code==='PGRST202'?'Ride database upgrade required. Contact support.':'Could not book: an active ride already exists or wallet balance is insufficient.',error.code==='PGRST202'?503:409);
+    return data;
   }
 
   async getNearbyDrivers(lat, lang, category = null) {
-    const { data, error } = await supabase.rpc('get_nearby_drivers', {
+    const { data, error } = await getServiceClient().rpc('get_nearby_drivers', {
       user_lat: lat,
       user_lng: lang,
       radius_meters: 5000
@@ -71,12 +48,12 @@ class RideService {
       const { getServiceClient } = require('../config/serviceClient');
       const {data: verified, error: verifyError} = await getServiceClient().from('drivers').select('*').in('id',eligible.map(d=>d.id));
       if (verifyError) throw new AppError('Could not validate available captains.',503);
-      const allowed = new Set((verified||[]).filter(d=>canOperate(d) && (!category || d.vehicle_type===categoryVehicle(category))).map(d=>d.id));
+      const allowed = new Set((verified||[]).filter(d=>canOperate(d) && d.is_online && (!category || d.vehicle_type===categoryVehicle(category))).map(d=>d.id));
       eligible = eligible.filter(d=>allowed.has(d.id));
     }
     if (eligible.length > 0) {
       const userIds = eligible.map(d => d.user_id);
-      const { data: profiles } = await supabase
+      const { data: profiles } = await getServiceClient()
         .from('profiles')
         .select('id, profile_pic')
         .in('id', userIds);
@@ -91,99 +68,31 @@ class RideService {
       }
     } 
     
-    return eligible;
+    return eligible.map(d=>({id:d.id,user_id:d.user_id,full_name:d.full_name,vehicle_type:d.vehicle_type,lat:d.lat,lng:d.lng,profile_pic:d.profile_pic}));
   }
 
-  async acceptRide(rideId, driverId) {
-    const db = require('../config/serviceClient').getServiceClient();
-    const {data:driver,error:driverError}=await db.from('drivers').select('*').eq('id',driverId).single();
-    if(driverError || !canOperate(driver) || !driver.is_online) throw new AppError('Captain is not eligible to accept rides.',403);
-    const categories=driver.vehicle_type==='Car'?['Car','Ride']:[driver.vehicle_type];
-    // Compare-and-set prevents two captains from claiming one pending request.
-    const {data,error}=await db.from('rides').update({driver_id:driverId,status:'driver_assigned'})
-      .eq('id',rideId).eq('status','pending').is('driver_id',null).in('category',categories).select().maybeSingle();
-    if(error || !data) throw new AppError('Ride unavailable or vehicle category does not match.',409);
-    return data;
+  async action(rideId,actorId,action) {
+    const {uuid}=require('./ridePolicy');uuid(rideId);uuid(actorId,'account');
+    const db=require('../config/serviceClient').getServiceClient();
+    if(action==='accept'){
+      const {data:driver,error}=await db.from('drivers').select('*').eq('user_id',actorId).maybeSingle();
+      if(error)throw new AppError('Could not validate captain eligibility.',503);
+      if(!canOperate(driver)||!driver.is_online)throw new AppError('Captain approval, valid documents and online status are required.',403);
+    }
+    const {data,error}=await db.rpc('ride_action_secure',{p_ride:rideId,p_actor:actorId,p_action:action});
+    if(error)throw new AppError(error.code==='42501'?'You are not authorised for this ride action.':error.code==='PGRST202'?'Ride database upgrade required. Contact support.':'Ride changed, action is out of order, or settlement balance is insufficient. Refresh before retrying.',error.code==='42501'?403:error.code==='PGRST202'?503:409);
+    if(action==='complete')return data;
+    const {data:ride,error:readError}=await db.from('rides').select(require('./ridePolicy').RIDE_SELECT).eq('id',rideId).single();
+    if(readError)throw new AppError('Action saved but ride could not be refreshed. Reload your active trip.',503);
+    await require('./rideAccess').reconcileRoom(global.io,ride);
+    return ride;
   }
-
-  async confirmRide(rideId) {
-    const { data, error } = await supabase
-      .from('rides')
-      .update({
-        status: 'accepted',
-        accepted_at: new Date().toISOString()
-      })
-      .eq('id', rideId)
-      .select('*, driver:drivers(*)');
-
-    if (error) throw error;
-    return data[0];
-  }
-
-  async rejectDriver(rideId) {
-    const { data, error } = await supabase
-      .from('rides')
-      .update({
-        status: 'pending',
-        driver_id: null
-      })
-      .eq('id', rideId)
-      .select();
-
-    if (error) throw error;
-    return data[0];
-  }
-
-  async cancelRide(rideId) {
-    const { data, error } = await supabase
-      .from('rides')
-      .update({
-        status: 'cancelled',
-        cancelled_at: new Date().toISOString()
-      })
-      .eq('id', rideId)
-      .select('*, driver:drivers(*)');
-
-    if (error) throw error;
-    return data[0];
-  }
-
-  async driverArrived(rideId) {
-    const { data, error } = await supabase
-      .from('rides')
-      .update({
-        status: 'driver_arrived',
-        arrived_at: new Date().toISOString()
-      })
-      .eq('id', rideId)
-      .select();
-
-    if (error) throw error;
-    return data[0];
-  }
-
-  async startRide(rideId) {
-    const { data, error } = await supabase
-      .from('rides')
-      .update({
-        status: 'started',
-        started_at: new Date().toISOString()
-      })
-      .eq('id', rideId)
-      .select();
-
-    if (error) throw error;
-    return data[0];
-  }
-
-  async completeRide(rideId) {
-    const { data, error } = await supabase.rpc('complete_ride_transaction', {
-      p_ride_id: rideId
-    });
-
-    if (error) throw error;
-    return data;
-  }
+  async acceptRide(id,actor){return this.action(id,actor,'accept');}
+  async confirmRide(id,actor){return this.action(id,actor,'confirm');}
+  async rejectDriver(id,actor){return this.action(id,actor,'reject');}
+  async cancelRide(id,actor){return this.action(id,actor,'cancel');}
+  async driverArrived(id,actor){return this.action(id,actor,'arrive');}
+  async startRide(id,actor){return this.action(id,actor,'start');}
+  async completeRide(id,actor){return this.action(id,actor,'complete');}
 }
-
 module.exports = new RideService();

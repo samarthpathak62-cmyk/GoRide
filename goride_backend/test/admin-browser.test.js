@@ -17,7 +17,7 @@ test('first sign-in shows MFA enrollment without treating HTTP202 as full admin 
  const b=browser();b.setResponses({setupRequired:true,setupToken:'aal1',refreshToken:'refresh',factorId:'factor',qrCode:'<svg/>',secret:'private-key'});
  await b.submit('login-form');assert.equal(b.nodes.get('enroll').hidden,false);assert.equal(b.nodes.get('dashboard').hidden,true);
  assert.equal(vm.runInContext('token',b.context),'');assert.equal(b.nodes.get('mfa-secret').textContent,'private-key');
- b.nodes.get('enroll-code').value='123456';b.setResponses({token:'aal2'},{data:[]},{data:[],hasMore:false},{checkoutReady:false,checks:{},notice:'Not configured'});
+ b.nodes.get('enroll-code').value='123456';b.setResponses({token:'aal2'},{data:[]},{data:[],hasMore:false},{checkoutReady:false,checks:{},notice:'Not configured'},{data:[]});
  await b.submit('enroll-form');assert.equal(b.nodes.get('dashboard').hidden,false);assert.equal(b.nodes.get('mfa-secret').textContent,'');
  assert.equal(b.calls[1].headers.Authorization,'Bearer aal1');assert.equal(b.calls[2].headers.Authorization,'Bearer aal2');
  b.nodes.get('logout').onclick();assert.equal(vm.runInContext('token',b.context),'');assert.equal(b.nodes.get('dashboard').hidden,true);

@@ -24,7 +24,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  LatLng _currentLocation = const LatLng(31.5204, 74.3587); 
+  LatLng _currentLocation = const LatLng(28.6139, 77.2090);
   bool _isRideRequestShowing = false;
 
   @override
@@ -62,7 +62,13 @@ class _HomePageState extends State<HomePage> {
     double? lng;
 
     if (val) {
-      final position = await _getCurrentLocation();
+      Position? position;
+      try { position = await _getCurrentLocation(); } catch (_) {}
+      if (!mounted) return;
+      if (position == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Turn on location and allow location permission before going online.')));
+        return;
+      }
       if (position != null) {
         lat = position.latitude;
         lng = position.longitude;

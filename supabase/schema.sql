@@ -17,3 +17,5 @@
 \i migrations/202610310003_captain_onboarding.sql
 \i migrations/202610310004_admin_accounts.sql
 \i migrations/202610310005_admin_claim_repair.sql
+\i migrations/202610310006_secure_ride_lifecycle.sql
+\i migrations/202610310007_ride_access_cutover.sql

@@ -305,7 +305,7 @@ class _RideTrackingViewState extends State<RideTrackingView> {
                               ),
                               const SizedBox(width: 5),
                               Text(
-                                "4.8",
+                                "New captain",
                                 style: GoogleFonts.poppins(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

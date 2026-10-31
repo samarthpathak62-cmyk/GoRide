@@ -1,9 +1,9 @@
-const { supabase } = require('../config/supabase');
+const { getServiceClient }=require('../config/serviceClient');
 const AppError = require('../utils/AppError');
 
 class MessageService {
   async saveMessage(senderId, receiverId, text, imageUrl = null) {
-    const { data, error } = await supabase
+    const { data, error } = await getServiceClient()
       .from('messages')
       .insert([
         {
@@ -24,7 +24,7 @@ class MessageService {
   }
 
   async getChatHistory(userId, otherUserId) {
-    const { data, error } = await supabase
+    const { data, error } = await getServiceClient()
       .from('messages')
       .select('*')
       .or(`and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`)
@@ -38,7 +38,7 @@ class MessageService {
   }
 
   async getConversationList(userId) {
-    const { data, error } = await supabase.rpc('get_user_conversations', { p_user_id: userId });
+    const { data, error } = await getServiceClient().rpc('get_user_conversations', { p_user_id: userId });
 
     if (error) {
       console.error('Error fetching conversations:', error);
