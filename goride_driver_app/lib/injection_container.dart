@@ -22,7 +22,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => http.Client());
 
   sl.registerLazySingleton(
-    () => SocketService(baseUrl: 'http://192.168.100.168:3000'),
+    () => SocketService(baseUrl: 'https://goride-phjs.onrender.com'),
   );
   sl.registerLazySingleton(() => ApiService(client: sl(), prefs: sl()));
   sl.registerLazySingleton(() => NotificationService(sl()));
