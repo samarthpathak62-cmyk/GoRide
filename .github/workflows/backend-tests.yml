@@ -1,0 +1,20 @@
+name: Backend tests
+on:
+  push:
+    branches: [main, arena/f0b1026b-goride]
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: goride_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: goride_backend/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test

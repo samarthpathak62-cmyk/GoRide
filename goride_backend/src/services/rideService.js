@@ -2,6 +2,7 @@ const { supabase } = require('../config/supabase');
 const { getDistance } = require('geolib');
 const fareService = require('./fareService');
 const AppError = require('../utils/AppError');
+const { canOperate, categoryVehicle } = require('./onboardingValidation');
 
 class RideService {
   async requestRide(rideData) {
@@ -14,6 +15,7 @@ class RideService {
         Math.abs(pickupLatitude) > 90 || Math.abs(dropLatitude) > 90 || Math.abs(pickupLongitude) > 180 || Math.abs(dropLongitude) > 180) {
       throw new AppError('Choose valid pickup and destination locations.', 400);
     }
+    if (!['Bike','Auto','Car','Ride'].includes(category)) throw new AppError('Choose Bike, Auto or Car.',400);
     const distance = getDistance(
       { latitude: pickupLatitude, longitude: pickupLongitude },
       { latitude: dropLatitude, longitude: dropLongitude }
@@ -53,7 +55,7 @@ class RideService {
     return data[0];
   }
 
-  async getNearbyDrivers(lat, lang) {
+  async getNearbyDrivers(lat, lang, category = null) {
     const { data, error } = await supabase.rpc('get_nearby_drivers', {
       user_lat: lat,
       user_lng: lang,
@@ -64,15 +66,23 @@ class RideService {
       return [];
     }
     
-    if (data && data.length > 0) {
-      const userIds = data.map(d => d.user_id);
+    let eligible = data || [];
+    if (eligible.length) {
+      const { getServiceClient } = require('../config/serviceClient');
+      const {data: verified, error: verifyError} = await getServiceClient().from('drivers').select('*').in('id',eligible.map(d=>d.id));
+      if (verifyError) throw new AppError('Could not validate available captains.',503);
+      const allowed = new Set((verified||[]).filter(d=>canOperate(d) && (!category || d.vehicle_type===categoryVehicle(category))).map(d=>d.id));
+      eligible = eligible.filter(d=>allowed.has(d.id));
+    }
+    if (eligible.length > 0) {
+      const userIds = eligible.map(d => d.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, profile_pic')
         .in('id', userIds);
         
       if (profiles) {
-        data.forEach(driver => {
+        eligible.forEach(driver => {
           const profile = profiles.find(p => p.id === driver.user_id);
           if (profile) {
             driver.profile_pic = profile.profile_pic;
@@ -81,21 +91,19 @@ class RideService {
       }
     } 
     
-    return data || [];
+    return eligible;
   }
 
   async acceptRide(rideId, driverId) {
-    const { data, error } = await supabase
-      .from('rides')
-      .update({
-        driver_id: driverId,
-        status: 'driver_assigned'
-      })
-      .eq('id', rideId)
-      .select();
-
-    if (error) throw error;
-    return data[0];
+    const db = require('../config/serviceClient').getServiceClient();
+    const {data:driver,error:driverError}=await db.from('drivers').select('*').eq('id',driverId).single();
+    if(driverError || !canOperate(driver) || !driver.is_online) throw new AppError('Captain is not eligible to accept rides.',403);
+    const categories=driver.vehicle_type==='Car'?['Car','Ride']:[driver.vehicle_type];
+    // Compare-and-set prevents two captains from claiming one pending request.
+    const {data,error}=await db.from('rides').update({driver_id:driverId,status:'driver_assigned'})
+      .eq('id',rideId).eq('status','pending').is('driver_id',null).in('category',categories).select().maybeSingle();
+    if(error || !data) throw new AppError('Ride unavailable or vehicle category does not match.',409);
+    return data;
   }
 
   async confirmRide(rideId) {

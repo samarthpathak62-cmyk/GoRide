@@ -1,0 +1,87 @@
+# GoRide captain ecosystem — first delivery
+
+This is an original GoRide implementation of common ride-hailing workflows,
+not a claim of Rapido affiliation, legal eligibility or full feature parity.
+Scope selected: Delhi/NCR; Bike, Auto and Car; secure admin review dashboard.
+
+## Implemented in this delivery
+- API-driven vehicle document checklists. Age 18+, six-digit PIN, Delhi/NCR
+  operating-city validation, vehicle registration, consent and expiry checks.
+- Government ID (masked where applicable; not Aadhaar-only), captain photo,
+  licence front/back, RC, insurance, PUC, vehicle photos. Auto/Car operational
+  checklists additionally request permit and fitness evidence. These are
+  configurable operating requirements, NOT definitive legal advice; a qualified
+  reviewer must assess the applicable city/state/vehicle rules and exemptions.
+- Private captain-documents storage bucket, upload size/signature limits, owner
+  folder policies, no overwrite/delete, 120-second admin document links.
+- Applicant-owned server drafts restore form fields/document references after
+  restart. Draft save is debounced; interrupted/in-flight uploads may need retry.
+- Pending -> approved/rejected human review, mandatory reason, version check and
+  audit row in the same transaction. Approved applicants must not self-edit the
+  reviewed application. Rejected applicants can correct and resubmit.
+- Admin dashboard at `/admin/`, server-controlled app_metadata.role=admin,
+  mandatory enrolled TOTP / AAL2, login throttling, in-memory access token,
+  no credential/document request-body logging. No admin account auto-created.
+- Drivers cannot directly update approval/online state with their own DB JWT.
+  Backend service-role operations enforce approval, permission confirmation,
+  valid unexpired documents and location checks before going online.
+- Matching Bike/Auto/Car categories, server-calculated fares (initial configurable
+  values, not Rapido fares), eligible captain filtering and category-aware atomic
+  ride claim. Existing `Ride` is treated as the legacy `Car` category.
+- Rider AND captain wallets use authenticated verified payment-link checkout.
+  Captain Top Up no longer has an empty click handler. Gateway availability is
+  visible in both apps; checkout never pretends an unconfigured gateway is live.
+
+## Payments: what is NOT live or implemented
+No merchant account/KYC was supplied. UPI/cards/netbanking are offered through
+an approved gateway's hosted checkout, subject to actual merchant eligibility.
+They are not separate integrations with every bank or UPI app.
+Read payments-rollout.md. PAYMENTS_ENABLED stays off until security review and
+merchant configuration. Bank/UPI captain payouts require a separate approved
+payout product/beneficiary onboarding; not implemented here. Cash ride ledger,
+commission settlement, refunds/disputes, reconciliation operations and direct
+ride payment checkout remain subsequent work. Top-up is not automatically a
+complete ride-payment/payout ecosystem. No transaction with real funds was tested.
+
+## Coordinated deployment — required, NOT performed by this delivery
+1. Rotate the committed Firebase service-account credential and provision secrets
+   out of source. Do not paste keys/passwords/MFA codes in chat.
+2. Stage this backend and test migration
+   `supabase/migrations/202610310003_captain_onboarding.sql` in a staging project.
+   This migration enables driver RLS and revokes client writes. Do NOT apply it
+   independently while the old backend still expects anonymous driver writes.
+3. Provision SUPABASE_SERVICE_ROLE_KEY only in backend secrets, never in Flutter.
+4. Create an administrator through a trusted operational process; set its role in
+   app_metadata (not client-editable user_metadata) and enroll verified TOTP MFA
+   using a trusted Supabase client. No MFA bypass/enrollment endpoint is provided
+   by this dashboard. Sign in at /admin/ with email/password/authenticator code.
+5. Deploy matching backend, apply migration in a coordinated maintenance window,
+   install matching APKs. New onboarding depends on this schema. The migration
+   intentionally does NOT auto-enable legacy approved captains; re-review their
+   applications and documents before activation.
+6. Test draft/restart, all three vehicle types, upload privacy, expiry failures,
+   rejection/resubmission, approval, online/offline and two-captain ride race.
+7. Complete the remaining production security review before enabling real funds.
+   Legacy ride lifecycle/socket ownership, profiles/wallet/RPC access and npm
+   dependency vulnerabilities are NOT fully remediated by this phase.
+
+The migration was exercised in a transaction with submit/review/audit/permission
+assertions, then fully rolled back. Live new policies/schema were NOT deployed.
+No live user/account was permanently added or deleted in this delivery.
+
+## Next phases, not completed work
+- All ride lifecycle endpoints/socket rooms authenticated and owner-authorised;
+  request/claim/arrive/OTP/start/cancel/complete validated atomically and idempotently.
+- Atomic cash/online ride ledger, commission/debt, refunds, genuine bank payouts,
+  settlement reports, provider reconciliation and fraud controls.
+- Captain beneficiary onboarding using provider tokens and audited reviewer roles.
+- Jurisdiction-specific launch approval, document verification provider integration,
+  consent/retention/deletion policy, incident/SOS operations and support escalation.
+- Full end-to-end device and real provider testing in staging before launch.
+
+## Validation
+`cd goride_backend && npm ci --ignore-scripts && npm test`
+Unit/HTTP tests cover checklist validation, cross-user documents, age/expiry,
+consent, region restriction, activation gates, admin role/AAL2 and unauthenticated
+HTTP denial, in addition to existing payment and ownership tests. They do not
+replace provider, browser, physical-device, regulatory or penetration testing.

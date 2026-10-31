@@ -23,3 +23,11 @@ class RequestPayout extends WalletEvent {
   @override
   List<Object?> get props => [userId, amount];
 }
+
+class TopUpWallet extends WalletEvent {
+  final String userId;
+  final double amount;
+  const TopUpWallet({required this.userId, required this.amount});
+  @override
+  List<Object?> get props => [userId, amount];
+}

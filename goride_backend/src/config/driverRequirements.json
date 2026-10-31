@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "market": "Delhi/NCR",
+  "notice": "Operational checklist, not a legal eligibility certificate. State-specific transport permissions and document validity must be checked by an authorised reviewer before activation. Do not upload unmasked Aadhaar; a supported alternate government ID may be used.",
+  "vehicles": [
+    {"id":"Bike","label":"Bike","documents":["identity","selfie","license_front","license_back","registration","insurance","puc","vehicle_front","vehicle_back"]},
+    {"id":"Auto","label":"Auto","documents":["identity","selfie","license_front","license_back","registration","insurance","puc","permit","fitness","vehicle_front","vehicle_back"]},
+    {"id":"Car","label":"Car","documents":["identity","selfie","license_front","license_back","registration","insurance","puc","permit","fitness","vehicle_front","vehicle_back"]}
+  ],
+  "documents": {
+    "identity":{"label":"Government photo ID (masked where applicable)","expires":false},
+    "selfie":{"label":"Clear recent captain photo","expires":false},
+    "license_front":{"label":"Driving licence — front","expires":true},
+    "license_back":{"label":"Driving licence — back","expires":false},
+    "registration":{"label":"Vehicle registration certificate (RC)","expires":false},
+    "insurance":{"label":"Valid vehicle insurance","expires":true},
+    "puc":{"label":"Pollution Under Control certificate","expires":true},
+    "permit":{"label":"Applicable transport / passenger permit","expires":true},
+    "fitness":{"label":"Vehicle fitness certificate","expires":true},
+    "vehicle_front":{"label":"Vehicle front photo, registration visible","expires":false},
+    "vehicle_back":{"label":"Vehicle rear photo, registration visible","expires":false}
+  }
+}

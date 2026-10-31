@@ -1,3 +1,5 @@
+import '../../../../core/services/api_service.dart';
+import '../../../../injection_container.dart' as di;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,6 +18,8 @@ class WalletPage extends StatefulWidget {
 
 class _WalletPageState extends State<WalletPage> with WidgetsBindingObserver {
   WalletLoaded? _lastWallet;
+  bool _checkoutAvailable = false;
+  String _paymentNotice = 'Checking online payment availability…';
   @override
   void initState() {
     super.initState();
@@ -34,7 +38,23 @@ class _WalletPageState extends State<WalletPage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) _refreshWallet();
   }
 
+  Future<void> _checkPayments() async {
+    try {
+      final data = await di.sl<ApiService>().get('/wallet/methods');
+      if (!mounted) return;
+      setState(() {
+        _checkoutAvailable = data['onlineCheckoutAvailable'] == true;
+        _paymentNotice = _checkoutAvailable
+          ? 'Secure checkout: available payment methods are shown by the provider.'
+          : 'Online payments await merchant setup. No fake top-ups. Bank payouts are not enabled.';
+      });
+    } catch (_) {
+      if (mounted) setState(() { _checkoutAvailable = false; _paymentNotice = 'Payment availability could not be verified. No payment will be initiated.'; });
+    }
+  }
+
   void _refreshWallet() {
+    _checkPayments();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       context.read<WalletBloc>().add(FetchWalletData(userId: authState.user.id));
@@ -100,6 +120,8 @@ class _WalletPageState extends State<WalletPage> with WidgetsBindingObserver {
                           ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Text(_paymentNotice, style: const TextStyle(color: Colors.white60, fontSize: 12)),
                     const SizedBox(height: 25),
 
                     Container(
@@ -159,7 +181,7 @@ class _WalletPageState extends State<WalletPage> with WidgetsBindingObserver {
                               _buildQuickAction(
                                 Icons.add_circle_outline_rounded,
                                 "Add Money",
-                                onTap: () => _showTopUpDialog(context),
+                                onTap: () { if (_checkoutAvailable) { _showTopUpDialog(context); } else { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_paymentNotice))); } },
                               ),
                               const SizedBox(width: 25),
                               _buildQuickAction(Icons.send_rounded, 'Send', onTap: () {

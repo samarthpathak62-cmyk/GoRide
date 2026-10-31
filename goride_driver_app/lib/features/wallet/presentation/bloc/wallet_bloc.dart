@@ -1,3 +1,4 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/config/backend_config.dart';
 import 'dart:convert';
@@ -19,6 +20,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   WalletBloc() : super(WalletInitial()) {
     on<FetchWalletData>(_onFetchWalletData);
     on<RequestPayout>(_onRequestPayout);
+    on<TopUpWallet>(_onTopUpWallet);
   }
 
   Future<void> _onFetchWalletData(
@@ -74,6 +76,37 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
         add(FetchWalletData(event.userId));
       } else {
         emit(WalletError(data['message'] ?? "Payout failed"));
+      }
+    } catch (e) {
+      emit(WalletError(e.toString()));
+    }
+  }
+  Future<void> _onTopUpWallet(
+    TopUpWallet event,
+    Emitter<WalletState> emit,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/payment-link"),
+        headers: await _headers(),
+        body: jsonEncode({
+          "userId": event.userId,
+          "amount": event.amount,
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 201) {
+        final checkout = Uri.parse(data['checkoutUrl'] as String);
+        if (checkout.scheme != 'https' || !['rzp.io', 'rzp.pay', 'razorpay.com'].any((h) => checkout.host == h || checkout.host.endsWith('.$h'))) {
+          throw Exception('Invalid checkout URL');
+        }
+        if (!await launchUrl(checkout, mode: LaunchMode.externalApplication)) {
+          throw Exception('Could not open payment checkout');
+        }
+        emit(const PaymentCheckoutOpened());
+      } else {
+        emit(WalletError(data['message'] ?? "Top-up failed"));
       }
     } catch (e) {
       emit(WalletError(e.toString()));

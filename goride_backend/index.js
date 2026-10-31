@@ -14,7 +14,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const app = express();
-app.set('trust proxy', true);
+// Render normally contributes one trusted proxy hop; never trust arbitrary forwarded IPs.
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -46,6 +47,14 @@ initSocket(io);
 
 
 // Routes
+app.use('/api/admin', require('./src/routes/adminRoutes'));
+app.use('/admin', (req,res,next) => {
+  res.set('Cache-Control','no-store');
+  res.set('Referrer-Policy','no-referrer');
+  res.set('X-Content-Type-Options','nosniff');
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+  next();
+}, express.static(require('node:path').join(__dirname,'admin')));
 app.use('/api/auth', authRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/wallet', walletRoutes);
@@ -70,12 +79,12 @@ app.get('/', (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error('BACKEND ERROR:', err);
-  const statusCode = err.statusCode || 500;
+  const statusCode = err.code === 'LIMIT_FILE_SIZE' ? 413 : err.statusCode || 500;
   const status = err.status || 'error';
 
   res.status(statusCode).json({
     status: status,
-    message: err.message,
+    message: err.code === 'LIMIT_FILE_SIZE' ? 'Document exceeds the 5 MB upload limit.' : err.message,
   });
 });
 

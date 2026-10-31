@@ -676,6 +676,8 @@ class _ExplorePageState extends State<ExplorePage> {
             switch (name.toLowerCase()) {
               case 'ride': return Icons.directions_car_filled_rounded;
               case 'bike': return Icons.two_wheeler_rounded;
+              case 'auto': return Icons.electric_rickshaw;
+              case 'car': return Icons.directions_car_rounded;
               case 'luxury': return Icons.electric_car_rounded;
               case 'courier': return Icons.local_shipping_rounded;
               default: return Icons.directions_car_rounded;

@@ -36,7 +36,7 @@ class AuthService {
     }
 
     if (!data.session) {
-      console.error('Login successful but session is missing!', data);
+      console.error('Login returned no session.');
       throw new AppError('Authentication session not established', 401);
     }
 
@@ -128,7 +128,6 @@ class AuthService {
       console.error('SUPABASE MFA ERROR:', error);
       throw new AppError(error.message, 400);
     }
-    console.log('SUPABASE MFA SUCCESS:', data);
 
     let authUser = null;
     try {

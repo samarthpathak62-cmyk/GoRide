@@ -27,33 +27,6 @@ class NewRideRequestReceivedEvent extends HomeEvent {
   List<Object?> get props => [rideData];
 }
 
-class SubmitVerificationEvent extends HomeEvent {
-  final String fullName;
-  final String dateOfBirth;
-  final String vehicleModel;
-  final String vehicleType;
-  final String city;
-  final String postalCode;
-  final double latitude;
-  final double longitude;
-  final Map<String, String?> documentPaths;
-
-  SubmitVerificationEvent({
-    required this.fullName,
-    required this.dateOfBirth,
-    required this.vehicleModel,
-    required this.vehicleType,
-    required this.city,
-    required this.postalCode,
-    required this.latitude,
-    required this.longitude,
-    required this.documentPaths,
-  });
-
-  @override
-  List<Object?> get props => [fullName, dateOfBirth, vehicleModel, vehicleType, city, postalCode, latitude, longitude, documentPaths];
-}
-
 class AcceptRideEvent extends HomeEvent {
   final String rideId;
   AcceptRideEvent({required this.rideId});

@@ -1,0 +1,12 @@
+const router=require('express').Router();
+const {rateLimit}=require('express-rate-limit');
+const {protect}=require('../middlewares/authMiddleware');
+const {requireAdmin}=require('../middlewares/adminAuth');
+const admin=require('../controllers/adminController');
+router.use((_req,res,next)=>{res.set('Cache-Control','no-store');next();});
+router.post('/session',rateLimit({windowMs:15*60*1000,limit:10,standardHeaders:'draft-8',legacyHeaders:false}),admin.login);
+router.use(protect,requireAdmin);
+router.get('/applications',admin.list);
+router.get('/applications/:userId',admin.detail);
+router.post('/applications/:userId/review',admin.review);
+module.exports=router;

@@ -29,7 +29,6 @@ exports.enrollMfa = catchAsync(async (req, res) => {
 exports.challengeMfa = catchAsync(async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const { factorId } = req.body;
-  console.log(`MFA Challenge - Token: ${token?.substring(0, 10)}...`);
   const result = await authService.challengeMfa(token, factorId);
   res.json(result);
 });
@@ -37,14 +36,12 @@ exports.challengeMfa = catchAsync(async (req, res) => {
 exports.verifyMfa = catchAsync(async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   const { factorId, challengeId, code } = req.body;
-  console.log(`MFA Verify - Token: ${token?.substring(0, 10)}...`);
   const result = await authService.verifyMfa(token, factorId, challengeId, code);
   res.json(result);
 });
 
 exports.listMfaFactors = catchAsync(async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
-  console.log('Listing MFA factors for token:', token ? `${token.substring(0, 10)}...` : 'NONE');
   const result = await authService.listMfaFactors(token);
   res.json(result);
 });

@@ -12,3 +12,6 @@
 -- Ordered repairs and verified-payment ledger
 \i migrations/202610310001_create_auth_profiles.sql
 \i migrations/202610310002_user_wallet_repairs.sql
+
+-- Captain onboarding and private review (coordinate backend deployment)
+\i migrations/202610310003_captain_onboarding.sql

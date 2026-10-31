@@ -1,3 +1,5 @@
+import '../../../../core/services/api_service.dart';
+import '../../../../injection_container.dart' as di;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,14 +17,40 @@ class WalletPage extends StatefulWidget {
   State<WalletPage> createState() => _WalletPageState();
 }
 
-class _WalletPageState extends State<WalletPage> {
+class _WalletPageState extends State<WalletPage> with WidgetsBindingObserver {
+  WalletLoaded? _lastWallet;
+  bool _checkoutAvailable = false;
+  String _paymentNotice = 'Checking online payment availability…';
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _refreshWallet();
   }
 
+  @override
+  void dispose() { WidgetsBinding.instance.removeObserver(this); super.dispose(); }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshWallet();
+  }
+  Future<void> _checkPayments() async {
+    try {
+      final data = await di.sl<ApiService>().get('/wallet/methods');
+      if (!mounted) return;
+      setState(() {
+        _checkoutAvailable = data['onlineCheckoutAvailable'] == true;
+        _paymentNotice = _checkoutAvailable
+          ? 'Secure checkout: available payment methods are shown by the provider.'
+          : 'Online payments await merchant setup. No fake top-ups. Bank payouts are not enabled.';
+      });
+    } catch (_) {
+      if (mounted) setState(() { _checkoutAvailable = false; _paymentNotice = 'Payment availability could not be verified. No payment will be initiated.'; });
+    }
+  }
+
   void _refreshWallet() {
+    _checkPayments();
     final authState = context.read<goride_auth.AuthBloc>().state;
     if (authState.userId.isNotEmpty) {
       context.read<WalletBloc>().add(FetchWalletData(authState.userId));
@@ -36,7 +64,9 @@ class _WalletPageState extends State<WalletPage> {
 
     return BlocListener<WalletBloc, WalletState>(
         listener: (context, state) {
-          if (state is PayoutSuccess) {
+          if (state is PaymentCheckoutOpened) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Complete payment in the browser. Return and refresh; only verified funds are credited.')));
+          } else if (state is PayoutSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message), backgroundColor: Colors.green),
             );
@@ -55,8 +85,9 @@ class _WalletPageState extends State<WalletPage> {
                   return const Center(child: CircularProgressIndicator(color: Color(0xff76eb07)));
                 }
 
-                double balance = 0.0;
-                List<TransactionModel> transactions = [];
+                if (state is WalletLoaded) _lastWallet = state;
+                double balance = _lastWallet?.balance ?? 0.0;
+                List<TransactionModel> transactions = _lastWallet?.transactions ?? [];
 
                 if (state is WalletLoaded) {
                   balance = state.balance;
@@ -75,6 +106,8 @@ class _WalletPageState extends State<WalletPage> {
                       children: [
                         const SizedBox(height: 20),
                         _buildHeader(context, driverId),
+                        const SizedBox(height: 12),
+                        Text(_paymentNotice, style: const TextStyle(color: Colors.white60, fontSize: 12)),
                         const SizedBox(height: 30),
                         _buildBalanceCard(balance),
                         const SizedBox(height: 40),
@@ -97,8 +130,7 @@ class _WalletPageState extends State<WalletPage> {
                               Icons.add_circle_outline_rounded,
                               Colors.white10,
                               isSecondary: true,
-                              onTap: () {
-                              },
+                              onTap: () { if (_checkoutAvailable) { _showTopUpDialog(context, driverId); } else { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_paymentNotice))); } },
                             ),
                           ),
                         ],
@@ -133,6 +165,25 @@ class _WalletPageState extends State<WalletPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _showTopUpDialog(BuildContext context, String driverId) async {
+    final amountController = TextEditingController();
+    await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Add money (INR)'),
+      content: TextField(controller: amountController,keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: const InputDecoration(labelText: 'Amount — INR 1 to 10,000')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext),child: const Text('Cancel')),
+        FilledButton(onPressed: () {
+          final amount = double.tryParse(amountController.text);
+          if (amount == null || !amount.isFinite || amount < 1 || amount > 10000) return;
+          context.read<WalletBloc>().add(TopUpWallet(userId: driverId, amount: amount));
+          Navigator.pop(dialogContext);
+        },child: const Text('Continue to secure checkout')),
+      ],
+    ));
+    amountController.dispose();
   }
 
   Widget _buildHeader(BuildContext context, String driverId) {

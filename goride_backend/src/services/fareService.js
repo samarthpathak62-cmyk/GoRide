@@ -1,6 +1,9 @@
 class FareService {
   constructor() {
     this.baseFares = {
+      'Bike': 20,
+      'Auto': 35,
+      'Car': 50,
       'Ride': 50,
       'Mini': 40,
       'Lux': 100,
@@ -9,6 +12,9 @@ class FareService {
       'Rentals': 150
     };
     this.ratesPerKm = {
+      'Bike': 10,
+      'Auto': 15,
+      'Car': 25,
       'Ride': 25,
       'Mini': 20,
       'Lux': 50,

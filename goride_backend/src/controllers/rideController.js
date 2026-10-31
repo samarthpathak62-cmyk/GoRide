@@ -28,10 +28,9 @@ exports.getExploreData = async (req, res) => {
         greeting: 'Where are you going?'
       },
       categories: [
-        { id: 1, name: 'Ride', icon: 'https://img.icons8.com/color/96/car.png', color: '0xff76eb07' },
-        { id: 2, name: 'Package', icon: 'https://img.icons8.com/color/96/package.png', color: '0xff3498db' },
-        { id: 3, name: 'Intercity', icon: 'https://img.icons8.com/color/96/intercity.png', color: '0xffe67e22' },
-        { id: 4, name: 'Rentals', icon: 'https://img.icons8.com/color/96/time.png', color: '0xff9b59b6' }
+        {id:1,name:'Bike',icon:'two_wheeler',color:'0xff76eb07'},
+        {id:2,name:'Auto',icon:'electric_rickshaw',color:'0xfff5c842'},
+        {id:3,name:'Car',icon:'directions_car',color:'0xff76eb07'}
       ],
       nearbyDrivers: nearbyDrivers,
       activePromo: {
@@ -49,7 +48,7 @@ exports.getExploreData = async (req, res) => {
 exports.requestRide = async (req, res) => {
   try {
     const ride = await rideService.requestRide({ ...req.body, userId: req.user.id });
-    const nearbyDrivers = await rideService.getNearbyDrivers(req.body.pickupLatitude, req.body.pickupLongitude);
+    const nearbyDrivers = await rideService.getNearbyDrivers(req.body.pickupLatitude, req.body.pickupLongitude, req.body.category);
 
     const { data: passengerProfile } = await supabase
       .from('profiles')
@@ -101,9 +100,10 @@ exports.requestRide = async (req, res) => {
 
 exports.acceptRide = async (req, res) => {
   try {
-    const { rideId, driverId } = req.body;
+    const { rideId } = req.body;
+    const driverId = req.user.id;
 
-    const { data: driverData, error: driverError } = await supabase
+    const { data: driverData, error: driverError } = await require('../config/serviceClient').getServiceClient()
       .from('drivers')
       .select('*')
       .eq('user_id', driverId)

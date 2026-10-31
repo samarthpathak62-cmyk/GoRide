@@ -130,56 +130,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       }
     });
 
-    on<SubmitVerificationEvent>((event, emit) async {
-      final user = authBloc.state.currentUser;
-      if (user == null) return;
-
-      emit(HomeLoading(isOnline: state.isOnline, verificationStatus: state.verificationStatus));
-      try {
-        final Map<String, String> files = {};
-        for (var entry in event.documentPaths.entries) {
-          if (entry.value != null) {
-            files[entry.key] = entry.value!;
-          }
-        }
-
-        final Map<String, String> documentUrls = {};
-        for (var fileEntry in files.entries) {
-          final uploadRes = await apiService.multipart(
-            '/drivers/upload-document', 
-            {'docType': fileEntry.key}, 
-            {'document': fileEntry.value}
-          );
-          documentUrls[fileEntry.key] = uploadRes['data']['url'];
-        }
-
-        final response = await apiService.post('/drivers/submit-verification', {
-          'fullName': event.fullName,
-          'dateOfBirth': event.dateOfBirth,
-          'vehicleModel': event.vehicleModel,
-          'vehicleType': event.vehicleType,
-          'documentUrls': documentUrls,
-          'city': event.city,
-          'postalCode': event.postalCode,
-          'latitude': event.latitude,
-          'longitude': event.longitude,
-        });
-
-        final data = response['data'];
-        emit(HomeStatusUpdated(
-          isOnline: false,
-          verificationStatus: data['status'] ?? 'pending',
-          driverData: data,
-        ));
-      } catch (e) {
-        emit(HomeError(
-          message: 'Submission Error: $e',
-          isOnline: state.isOnline,
-          verificationStatus: state.verificationStatus,
-        ));
-      }
-    });
-
     on<AcceptRideEvent>((event, emit) async {
       final user = authBloc.state.currentUser;
       if (user == null) return;

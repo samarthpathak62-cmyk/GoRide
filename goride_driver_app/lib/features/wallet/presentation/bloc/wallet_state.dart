@@ -37,3 +37,7 @@ class PayoutSuccess extends WalletState {
   @override
   List<Object?> get props => [message];
 }
+
+class PaymentCheckoutOpened extends WalletState {
+  const PaymentCheckoutOpened();
+}
