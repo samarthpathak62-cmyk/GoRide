@@ -6,7 +6,11 @@ const app=express();app.use(express.json());app.use('/api',require('../src/route
 app.use((e,_req,res,_next)=>res.status(e.statusCode||500).json({message:e.message}));
 test('every ride lifecycle/read endpoint rejects missing authentication before touching data',async()=>{
  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
- try{for(const [method,suffix]of[['GET','active'],['GET','history'],...['request','accept','confirm','reject','cancel','arrive','start','complete'].map(s=>['POST',s])]){
+ try{for(const [method,suffix]of[['GET','active'],['GET','history'],...['quote','request','accept','confirm','reject','cancel','arrive','start','complete'].map(s=>['POST',s])]){
  const response=await fetch(`http://127.0.0.1:${server.address().port}/api/rides/${suffix}?userId=someone-else`,{method});assert.equal(response.status,401,suffix);
- }}finally{await new Promise(r=>server.close(r));}
+ }
+ for(const [method,path] of [['GET','/support/tickets'],['POST','/support/tickets'],['GET','/rides/00000000-0000-4000-8000-000000000001/receipt'],...['share','share/revoke','safety-alert'].map(s=>['POST',`/rides/00000000-0000-4000-8000-000000000001/${s}`])]){
+ const response=await fetch(`http://127.0.0.1:${server.address().port}/api${path}`,{method});assert.equal(response.status,401,path);
+ }
+ }finally{await new Promise(r=>server.close(r));}
 });

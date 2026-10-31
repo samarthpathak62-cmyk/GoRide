@@ -88,7 +88,7 @@ class _CaptainTripHistoryPageState extends State<CaptainTripHistoryPage> {
       if(_trips.isEmpty&&_error==null)const Text('No captain trips yet.'),
       ..._trips.map((t)=>Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Text("${t['category']} · ${t['status']} · INR ${t['fare']}"),
-        Text("${t['pickup_address']} → ${t['drop_address']}"),
+        Text("${t['pickup_location']} → ${t['drop_location']}"),
         Text("${t['payment_method']??'wallet'} · ${t['payment_status']??'unpaid'}"),
         Text(t['created_at'].toString()),TripTools(rideId:t['id'].toString()),
       ])))),
