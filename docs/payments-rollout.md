@@ -59,3 +59,14 @@ all those pre-existing routes. PAYMENTS_ENABLED defaults off intentionally.
 Covers signatures/tampering, amounts, missing config, captured-vs-authorized funds,
 amount mismatch and wallet ownership. Successful APK compilation is separate from
 physical device, actual acquiring bank, webhook delivery and Render deploy tests.
+
+## Admin readiness visibility (31 October 2026)
+The MFA-protected operations dashboard now reports server configuration **presence**
+only: service-role key, live Razorpay key ID, gateway secret, webhook secret and
+explicit enablement. No secret value is returned. A positive configuration check is
+NOT merchant approval, settlement verification, a captured transaction, or proof of
+webhook delivery. UPI/cards/netbanking availability depends on the merchant's
+Razorpay hosted-checkout eligibility. Cash ride settlement, bank payouts, refunds,
+commission/debt accounting and full Rapido-equivalent payment coverage are **not
+implemented by this change**. Do not enable real money until outstanding ride/API
+security work and end-to-end payment/reconciliation tests are complete.

@@ -52,7 +52,7 @@ app.use('/admin', (req,res,next) => {
   res.set('Cache-Control','no-store');
   res.set('Referrer-Policy','no-referrer');
   res.set('X-Content-Type-Options','nosniff');
-  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
   next();
 }, express.static(require('node:path').join(__dirname,'admin')));
 app.use('/api/auth', authRoutes);
@@ -62,7 +62,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api', rideRoutes);
 
 
-app.get('/health', (req, res) => res.json({ status: 'ok', message: 'GoRide Backend is healthy!' }));
+app.get('/health', (req, res) => res.json({ status: 'ok', message: 'GoRide Backend is healthy!',
+  apiVersion: 2, build: (process.env.RENDER_GIT_COMMIT || '').slice(0,12) || 'unknown' }));
 app.get('/', (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.set('Referrer-Policy', 'no-referrer');
@@ -84,6 +85,7 @@ app.use((err, req, res, next) => {
 
   res.status(statusCode).json({
     status: status,
+    ...(typeof err.code === 'string' ? {code: err.code} : {}),
     message: err.code === 'LIMIT_FILE_SIZE' ? 'Document exceeds the 5 MB upload limit.' : err.message,
   });
 });

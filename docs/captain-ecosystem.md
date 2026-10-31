@@ -85,3 +85,39 @@ Unit/HTTP tests cover checklist validation, cross-user documents, age/expiry,
 consent, region restriction, activation gates, admin role/AAL2 and unauthenticated
 HTTP denial, in addition to existing payment and ownership tests. They do not
 replace provider, browser, physical-device, regulatory or penetration testing.
+
+## First administrator and account invitations (31 October 2026)
+
+Migration `202610310004_admin_accounts.sql` adds private trusted email reservations,
+activation on **verified** ownership, and account-management auditing. It does not
+ship a password or silently create a verified owner. The authorised owner's email
+reservation was inserted separately in the live project; it is not embedded in SQL.
+
+After deploying this branch, open `https://goride-phjs.onrender.com/admin/`:
+1. Select **First admin / invited admin: create your account**.
+2. Enter the authorised email and choose a private password (12+ characters).
+3. Confirm the email, then sign in. First sign-in displays a QR code/setup key for
+   an authenticator app; verify its six-digit code. Later sign-ins require that code.
+4. In **Accounts & admin access**, invite riders/captains/admins, or grant admin
+   access to an existing verified account. Recipients choose their own passwords.
+   Existing accounts are not overwritten. Admins must still complete MFA.
+
+Only server-side trusted `app_metadata.role=admin` plus an AAL2 session permits
+account listing, invitations, captain review and payments-status access. Enrollment
+and invitation tokens remain in memory; fragments are cleared immediately. No
+browser token persistence is used. An account operation requires the backend's
+`SUPABASE_SERVICE_ROLE_KEY`, never an APK or browser setting. Failed email sending
+must be resolved in Supabase email/SMTP configuration; no delivery is promised.
+The production root and `/admin/` must remain allowed auth redirects. Email
+confirmation must remain enabled. An administrator can consume another verified
+admin grant only after signing in again to obtain updated trusted claims.
+
+### Onboarding load failure
+The live project was missing the draft/private-document/application RPC schema,
+not merely an old server deploy. Migration 003 has now been applied. Verified live:
+`driver_application_drafts` and `captain_review_audit` have RLS enabled, the
+`captain-documents` bucket is private, and the submit RPC exists. New client errors
+identify requirements vs saved-draft vs status loading; a missing draft schema
+returns `ONBOARDING_SCHEMA_MISSING` instead of the generic black-page message.
+`GET /health` now reports `apiVersion: 2` and Render's deployed commit, if supplied.
+Live schema checks do not replace a real device submission and admin review test.

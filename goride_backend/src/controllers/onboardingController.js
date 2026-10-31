@@ -6,7 +6,14 @@ const catchAsync = require('../utils/catchAsync');
 exports.requirements = (_req, res) => res.json({ data: requirements });
 exports.getDraft = catchAsync(async (req, res) => {
   const { data, error } = await req.supabase.from('driver_application_drafts').select('payload').eq('user_id', req.user.id).maybeSingle();
-  if (error) throw new AppError('Could not load onboarding draft.', 503);
+  if (error) {
+    const missing = ['42P01','PGRST205','PGRST204'].includes(error.code);
+    const issue = new AppError(missing
+      ? 'Captain database setup is incomplete. The operator must apply the captain_onboarding migration.'
+      : 'Could not read your saved draft. Please retry or sign in again.', 503);
+    issue.code = missing ? 'ONBOARDING_SCHEMA_MISSING' : 'DRAFT_READ_FAILED';
+    throw issue;
+  }
   res.json({ data: data?.payload || {} });
 });
 exports.saveDraft = catchAsync(async (req, res) => {

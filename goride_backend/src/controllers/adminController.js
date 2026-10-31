@@ -1,23 +1,37 @@
-const {createClient}=require('@supabase/supabase-js');
 const {getServiceClient}=require('../config/serviceClient');
 const {isAdmin}=require('../middlewares/adminAuth');
 const {validateApplication,ownedPath}=require('../services/onboardingValidation');
 const AppError=require('../utils/AppError');
 const catchAsync=require('../utils/catchAsync');
 exports.login=catchAsync(async(req,res)=>{
- res.set('Cache-Control','no-store');
- if(typeof req.body.email!=='string' || req.body.email.length>254 || typeof req.body.password!=='string' || req.body.password.length>256 || !/^\d{6}$/.test(req.body.code||'')) throw new AppError('Enter email, password and a six-digit authenticator code.',400);
- const client=createClient(process.env.SUPABASE_URL,process.env.SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
- const {data,error}=await client.auth.signInWithPassword({email:req.body.email,password:req.body.password});
- if(error||!isAdmin(data?.user)) throw new AppError('Invalid administrator credentials.',401);
+ const {client,data}=await require('../services/adminSessions').passwordSession(req.body);
  const {data:factors,error:factorError}=await client.auth.mfa.listFactors();
+ if(factorError) throw new AppError('Could not inspect administrator MFA.',503);
  const factor=factors?.totp?.find(f=>f.status==='verified');
- if(factorError||!factor) throw new AppError('Enroll administrator TOTP MFA before using this dashboard.',403);
+ if(!factor) {
+  for(const f of factors?.totp||[]) if(f.status==='unverified') await client.auth.mfa.unenroll({factorId:f.id});
+  const {data:enrollment,error}=await client.auth.mfa.enroll({factorType:'totp',friendlyName:'GoRide Admin'});
+  if(error) throw new AppError('Could not start authenticator setup.',503);
+  return res.status(202).json({setupRequired:true,factorId:enrollment.id,qrCode:enrollment.totp.qr_code,secret:enrollment.totp.secret,
+   setupToken:data.session.access_token,refreshToken:data.session.refresh_token});
+ }
+ if(!req.body.code) return res.status(202).json({mfaRequired:true,message:'Enter the six-digit code from your authenticator, then sign in again.'});
+ if(!/^\d{6}$/.test(req.body.code)) throw new AppError('Enter a six-digit authenticator code.',400);
  const {data:challenge,error:challengeError}=await client.auth.mfa.challenge({factorId:factor.id});
  if(challengeError) throw new AppError('Could not create MFA challenge.',401);
  const {data:verified,error:verifyError}=await client.auth.mfa.verify({factorId:factor.id,challengeId:challenge.id,code:req.body.code});
  if(verifyError) throw new AppError('Invalid MFA code.',401);
  res.json({token:verified.access_token});
+});
+exports.verifyEnrollment=catchAsync(async(req,res)=>{
+ if(!isAdmin(req.user)) throw new AppError('Administrator access required.',403);
+ if(!/^\d{6}$/.test(req.body.code||'')||typeof req.body.factorId!=='string') throw new AppError('Enter factor ID and a six-digit authenticator code.',400);
+ const client=await require('../services/adminSessions').bindSession(req);
+ const {data:challenge,error:challengeError}=await client.auth.mfa.challenge({factorId:req.body.factorId});
+ if(challengeError) throw new AppError('Authenticator setup expired. Sign in and try again.',400);
+ const {data,error}=await client.auth.mfa.verify({factorId:req.body.factorId,challengeId:challenge.id,code:req.body.code});
+ if(error) throw new AppError('Authenticator code is invalid. Please try again.',400);
+ res.json({token:data.access_token});
 });
 exports.list=catchAsync(async(_req,res)=>{
  const {data,error}=await getServiceClient().from('drivers').select('user_id,full_name,vehicle_type,city,status,review_version,last_updated').order('last_updated',{ascending:false}).limit(100);

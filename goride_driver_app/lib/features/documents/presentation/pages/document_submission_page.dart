@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/api_exception.dart';
 import '../../../../injection_container.dart' as di;
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
@@ -47,10 +48,15 @@ class _DocumentSubmissionPageState extends State<DocumentSubmissionPage> {
   void dispose() { _timer?.cancel(); for (final field in _fields.values) { field.dispose(); } super.dispose(); }
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
+    String stage = 'requirements';
     try {
-      final responses = await Future.wait([
-        _api.get('/drivers/requirements'), _api.get('/drivers/draft'), _api.get('/drivers/status'),
-      ]);
+      final requirements = await _api.get('/drivers/requirements');
+      stage = 'saved draft';
+      final draftResponse = await _api.get('/drivers/draft');
+      stage = 'driver status';
+      final statusResponse = await _api.get('/drivers/status');
+      final responses = [requirements, draftResponse, statusResponse];
+
       if (!mounted) return;
       final current = Map<String, dynamic>.from(responses[2]['data'] ?? {});
       final draft = Map<String, dynamic>.from(responses[1]['data'] ?? {});
@@ -72,8 +78,16 @@ class _DocumentSubmissionPageState extends State<DocumentSubmissionPage> {
         _reason = current['review_reason']?.toString() ?? '';
         _loading = false;
       });
+    } on ApiException catch (e) {
+      if (mounted) setState(() {
+        _loading = false;
+        _error = e.statusCode == 401 ? 'Your session expired. Sign out and sign in again.'
+          : 'Could not load $stage: ${e.message}';
+      });
+    } on TimeoutException {
+      if (mounted) setState(() { _loading = false; _error = 'The backend took too long to load $stage. Wait a moment, then retry.'; });
     } catch (_) {
-      if (mounted) setState(() { _loading = false; _error = 'Could not load captain onboarding. Check your connection and ensure the updated backend is deployed.'; });
+      if (mounted) setState(() { _loading = false; _error = 'Could not read $stage. Check your connection and retry, or contact support.'; });
     }
   }
   Future<void> _saveDraft() {

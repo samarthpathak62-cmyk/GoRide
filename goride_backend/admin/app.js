@@ -1,21 +1,52 @@
 'use strict';
 // Access token is kept in memory only, never in localStorage or a URL.
-let token='',applications=[],selected;
+let token='',applications=[],selected,setup=null,activation=null,qrUrl=null,accountsPage=1;
 const $=id=>document.getElementById(id);
 const text=(tag,value,className)=>{const n=document.createElement(tag);n.textContent=value;if(className)n.className=className;return n;};
 function notify(message){$('message').textContent=message;}
-async function api(path,body){
- const r=await fetch(`/api/admin${path}`,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{})});
+async function api(path,body,accessToken=token){
+ const r=await fetch(`/api/admin${path}`,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',...(accessToken?{Authorization:`Bearer ${accessToken}`}:{})},...(body?{body:JSON.stringify(body)}:{})});
  const data=await r.json();
  if(!r.ok){if(r.status===401)signOut();throw Error(data.message||'Request failed');}return data;
 }
-function signOut(){token='';selected=null;applications=[];$('detail').replaceChildren();$('applications').replaceChildren();$('login').hidden=false;$('dashboard').hidden=true;$('logout').hidden=true;}
+function clearSetup(){if(qrUrl)URL.revokeObjectURL(qrUrl);qrUrl=null;setup=null;$('mfa-qr').removeAttribute('src');$('mfa-secret').textContent='';$('enroll-code').value='';}
+function showSection(id){for(const key of ['login','register','enroll','activate','dashboard'])$(key).hidden=key!==id;}
+function signOut(){token='';clearSetup();activation=null;selected=null;applications=[];$('detail').replaceChildren();$('applications').replaceChildren();$('accounts').replaceChildren();$('password').value='';$('code').value='';showSection('login');$('logout').hidden=true;}
 $('logout').onclick=signOut;
-$('login-form').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;notify('Checking credentials and MFA…');try{
- const data=await api('/session',{email:$('email').value,password:$('password').value,code:$('code').value});token=data.token;$('password').value='';$('code').value='';$('login').hidden=true;$('dashboard').hidden=false;$('logout').hidden=false;await load();
+$('show-register').onclick=()=>showSection('register');$('back-login').onclick=()=>showSection('login');
+async function openDashboard(data){if(typeof data.token!=='string'||!data.token)throw Error('No verified administrator session returned.');token=data.token;clearSetup();$('password').value='';$('code').value='';showSection('dashboard');$('logout').hidden=false;accountsPage=1;await load();await loadAccounts();await loadPayments();}
+$('login-form').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;notify('Checking credentials…');try{
+ const data=await api('/session',{email:$('email').value,password:$('password').value,code:$('code').value});
+ if(data.setupRequired){clearSetup();setup=data;showSection('enroll');$('password').value='';$('logout').hidden=false;
+  qrUrl=URL.createObjectURL(new Blob([data.qrCode],{type:'image/svg+xml'}));$('mfa-qr').src=qrUrl;$('mfa-secret').textContent=data.secret;notify('Scan the QR code and verify one authenticator code.');
+ }else if(data.mfaRequired){$('code').focus();notify(data.message);}else await openDashboard(data);
 }catch(e){notify(e.message);}finally{button.disabled=false;}};
+$('owner-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{
+ const data=await api('/register-owner',{email:$('owner-email').value,password:$('owner-password').value},'');
+ $('email').value=$('owner-email').value;$('owner-password').value='';showSection('login');notify(data.message);
+}catch(e){notify(e.message);}finally{b.disabled=false;}};
+$('enroll-form').onsubmit=async e=>{e.preventDefault();if(!setup)return;const b=e.submitter;b.disabled=true;try{
+ const data=await api('/mfa/verify',{factorId:setup.factorId,refreshToken:setup.refreshToken,code:$('enroll-code').value},setup.setupToken);await openDashboard(data);
+}catch(e){notify(e.message);}finally{b.disabled=false;}};
+$('activate-form').onsubmit=async e=>{e.preventDefault();if(!activation)return;const b=e.submitter;b.disabled=true;try{
+ const data=await api('/activate',{refreshToken:activation.refreshToken,password:$('activate-password').value},activation.token);
+ activation=null;$('activate-password').value='';showSection('login');notify(data.message);
+}catch(e){notify(e.message);}finally{b.disabled=false;}};
+$('account-form').onsubmit=async e=>{e.preventDefault();const b=e.submitter;
+ if($('account-role').value==='admin'&&!confirm('Grant administrator privileges to this email? MFA and email verification are required.'))return;
+ b.disabled=true;try{const data=await api('/accounts',{email:$('account-email').value,role:$('account-role').value});$('account-email').value='';await loadAccounts();notify(data.message);}catch(e){notify(e.message);}finally{b.disabled=false;}};
+async function loadAccounts(){try{const data=await api(`/accounts?page=${accountsPage}`);$('accounts').replaceChildren(...data.data.map(a=>text('div',`${a.email} · ${a.role} · ${a.verified?'verified':'email pending'}`,'account-row')));$('accounts-next').hidden=!data.hasMore;}catch(e){notify(e.message);}}
+$('accounts-next').onclick=()=>{accountsPage++;loadAccounts();};
+// Tokens are consumed only in memory and immediately removed from the address bar.
+const fragment=new URLSearchParams(location.hash.slice(1));
+history.replaceState(null,'',location.pathname);
+if(fragment.has('error'))notify(fragment.get('error_description')||'Email link expired. Request a new invitation.');
+else if(['invite','recovery'].includes(fragment.get('type'))&&fragment.get('access_token')&&fragment.get('refresh_token')){
+ activation={token:fragment.get('access_token'),refreshToken:fragment.get('refresh_token')};showSection('activate');notify('Email link accepted. Choose a new password.');
+}else if(fragment.get('access_token'))notify('Email verified. Sign in below to complete administrator setup.');
+fragment.delete('access_token');fragment.delete('refresh_token');
 async function load(){notify('Loading applications…');try{applications=(await api('/applications')).data;renderQueue();notify('');}catch(e){notify(e.message);}}
-$('refresh').onclick=load;$('filter').onchange=renderQueue;
+$('refresh').onclick=async()=>{accountsPage=1;await load();await loadAccounts();await loadPayments();};$('filter').onchange=renderQueue;
 function renderQueue(){
  $('stats').replaceChildren(...['pending','approved','rejected'].map(status=>{const box=text('div','', 'stat');box.append(text('strong',applications.filter(a=>a.status===status).length),text('span',status));return box;}));
  const list=applications.filter(a=>$('filter').value==='all'||a.status===$('filter').value);
@@ -36,3 +67,8 @@ function renderDetail(){
 }
 async function review(status){const reason=$('reason').value.trim(),compliance=$('compliance').checked;if(reason.length<5){notify('Add a meaningful review reason.');return;}if(status==='approved'&&!compliance){notify('Complete the compliance checks before approving.');return;}if(!confirm(`${status==='approved'?'Approve':'Reject'} this application? This action is recorded.`))return;
  const buttons=$('detail').querySelectorAll('button');buttons.forEach(b=>b.disabled=true);try{await api(`/applications/${encodeURIComponent(selected.user_id)}/review`,{status,reason,compliance,version:selected.review_version});await load();await detail(selected.user_id);notify('Review recorded.');}catch(e){notify(e.message);}finally{buttons.forEach(b=>b.disabled=false);}}
+
+async function loadPayments(){try{const p=await api('/payments/status');$('payment-status').replaceChildren(
+ text('p',p.checkoutReady?'Online checkout configured — still requires provider transaction testing':'Online payments are NOT configured / enabled'),
+ ...Object.entries(p.checks).map(([key,value])=>text('div',`${value?'✓':'✗'} ${key}`,'account-row')),
+ text('p',p.notice,'muted'));}catch(e){$('payment-status').textContent=e.message;}}

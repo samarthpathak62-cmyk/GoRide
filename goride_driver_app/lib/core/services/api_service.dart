@@ -1,3 +1,4 @@
+import 'api_exception.dart';
 import '../config/backend_config.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -26,13 +27,10 @@ class ApiService {
     try {
       body = jsonDecode(response.body);
     } catch (e) {
-      print('JSON DECODE ERROR: ${e.toString()}');
-      print('RAW RESPONSE BODY: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
-      
-      if (response.body.contains('<!DOCTYPE html>') || response.body.contains('<html>')) {
-        throw Exception(' Server error ${response.statusCode}');
-      }
-      throw Exception('Failed server response as JSON. Status: ${response.statusCode}');
+      throw ApiException(response.statusCode,
+        response.statusCode == 404
+          ? 'This API endpoint is missing from the deployed backend.'
+          : 'Backend returned an invalid response (HTTP ${response.statusCode}). Please retry.');
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -45,7 +43,7 @@ class ApiService {
       final message = (body is Map && body.containsKey('message')) 
           ? body['message'] 
           : 'Server Error ${response.statusCode}';
-      throw Exception(message);
+      throw ApiException(response.statusCode, message.toString(), code: body is Map ? body['code']?.toString() : null);
     }
   }
 
